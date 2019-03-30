@@ -14,9 +14,9 @@ void main_error_handler(const char *msg) {
 int main(int argc, const char* argv[]) {
   char *actualPath = (char *)malloc(ACTUAL_PATH_LEN);
   dw_instance *dw = dw_init(requestedPath, main_error_handler, NULL);
-  int creatOk = dw_create_pipe(dw, &actualPath, ACTUAL_PATH_LEN);
+  int createOk = dw_create_pipe(dw, &actualPath, ACTUAL_PATH_LEN);
 
-  if (creatOk) {
+  if (createOk) {
     printf("create worked: ");
     printf("%s", actualPath);
     printf("\n");

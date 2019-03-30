@@ -107,15 +107,13 @@ bool dw_create_pipe(
     throw_last_error(dw, "Couldn't create the pipe");
     return false;
   }
-/*
+
   if ((strlen(dw->path) + 1) > bufferLen) {
     throw_last_error(dw, "Full path buffer overrun");
     return false;
   }
-*/
 
-  strncpy(*actualPathBuf, dw->path, bufferLen);
-
+  strcpy(*actualPathBuf, dw->path);
   return true;
 }
 
