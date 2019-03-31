@@ -6,20 +6,29 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-struct dw_read_params {
-  dw_instance *dw;
-  void (*callback)(dw_instance *dw, int len, bool timeout);
-};
-
 struct dw_instance {
   void *userData;
   const char *path;
   const char fullPath[FULL_PATH_SIZE];
   void (*errorHandler)(const char * message);
   pthread_t readThread;
+  pthread_t writeThread;
   char readBuffer[READ_BUFFER_SIZE];
+  char writeBuffer[WRITE_BUFFER_SIZE];
+  size_t writeSize;
   dw_read_params *readParams;
+  dw_write_params *writeParams;
   // TODO: portable perms
+};
+
+struct dw_read_params {
+  dw_instance *dw;
+  void (*callback)(dw_instance *dw, int len, bool timeout);
+};
+
+struct dw_write_params {
+  dw_instance *dw;
+  void (*callback)(dw_instance *dw, bool timeout);
 };
 
 const mode_t CREATE_PERMS = S_IRUSR | S_IWUSR;
@@ -78,7 +87,7 @@ void *read_async(void *params) {
     READ_BUFFER_SIZE
   );
 
-  if (!readResult) {
+  if (readResult < 0) {
     throw_last_error(readParams->dw, "Error reading file");
     return NULL;
   }
@@ -86,6 +95,32 @@ void *read_async(void *params) {
   close(fd);
   fd = 0;
   readParams->callback(readParams->dw, readResult, false);
+  return NULL;
+}
+
+void *write_async(void *params) {
+  dw_write_params *writeParams = (dw_write_params *)params;
+  int fd = open(writeParams->dw->fullPath, WRITE_PERMS);
+
+  if (fd < 0) {
+    throw_last_error(writeParams->dw, "Error opening file");
+    return NULL;
+  }
+
+  size_t writeResult = write(
+    fd, 
+    writeParams->dw->writeBuffer, 
+    writeParams->dw->writeSize
+  );
+
+  if (writeResult < 0) {
+    throw_last_error(writeParams->dw, "Error writing file");
+    return NULL;
+  }
+
+  close(fd);
+  fd = 0;
+  writeParams->callback(writeParams->dw, false);
   return NULL;
 }
 
@@ -100,6 +135,7 @@ dw_instance *dw_init(
   dw->path = requestedPath;
   dw->errorHandler = errorHandler;
   dw->readParams = NULL;
+  dw->writeParams = NULL;
 
   if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
     throw_last_error(dw, "Full path buffer overrun");
@@ -138,9 +174,29 @@ void dw_read_pipe(
 
   pthread_create(&dw->readThread, NULL, read_async, (void *)dw->readParams);
   pthread_join(dw->readThread, NULL);
+  free(dw->readParams);
+  dw->readParams = NULL;
 }
 
-int dw_copy_full_path(dw_instance *dw, char **buffer, int len) {
+void dw_write_pipe(
+  dw_instance *dw, 
+  const char *buffer, 
+  size_t len,
+  void (*callback)(dw_instance *dw, bool timeout)
+) {
+  dw->writeParams = (dw_write_params *)malloc(sizeof(dw_write_params));
+  dw->writeParams->dw = dw;
+  dw->writeParams->callback = callback;
+  memcpy(dw->writeBuffer, buffer, len);
+  dw->writeSize = len;
+
+  pthread_create(&dw->writeThread, NULL, write_async, (void *)dw->writeParams);
+  pthread_join(dw->writeThread, NULL);
+  free(dw->writeParams);
+  dw->writeParams = NULL;
+}
+
+int dw_copy_full_path(dw_instance *dw, char *buffer, int len) {
   int fullPathLen = strlen(dw->path) + 1;
 
   if (fullPathLen > len) {
@@ -148,11 +204,11 @@ int dw_copy_full_path(dw_instance *dw, char **buffer, int len) {
     return -1;
   }
 
-  strncpy(*buffer, dw->path, fullPathLen);
+  strncpy(buffer, dw->path, fullPathLen);
   return fullPathLen;
 }
 
-int dw_copy_read_buffer(dw_instance *dw, char **buffer, int len) {
+int dw_copy_read_buffer(dw_instance *dw, char *buffer, int len) {
   int readBufferLen = strlen(dw->readBuffer) + 1;
 
   if (readBufferLen > len) {
@@ -160,6 +216,6 @@ int dw_copy_read_buffer(dw_instance *dw, char **buffer, int len) {
     return -1;
   }
 
-  strncpy(*buffer, dw->readBuffer, readBufferLen);
+  strncpy(buffer, dw->readBuffer, readBufferLen);
   return readBufferLen;
 }
