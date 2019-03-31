@@ -42,18 +42,18 @@ char *get_last_error_str() {
   return get_error_str(errno);
 }
 
-void throw_error(dw_instance *dw, const char *message, const char *innerMessage) {
-  if (innerMessage == NULL) {
+void throw_error(dw_instance *dw, const char *message, const char *innerMsg) {
+  if (innerMsg == NULL) {
     dw->errorHandler(message);
     return;
   }
 
-  size_t len = strlen(message) + strlen(ERROR_SEP) + strlen(innerMessage) + 1;
+  size_t len = strlen(message) + strlen(ERROR_SEP) + strlen(innerMsg) + 1;
   char *str = (char *)malloc(len);
   memset(str, '\0', len);
   strcpy(str, message);
   strcat(str, ERROR_SEP);
-  strcat(str, innerMessage);
+  strcat(str, innerMsg);
 
   dw->errorHandler(str);
   free(str);
@@ -63,7 +63,7 @@ void throw_last_error(dw_instance *dw, const char *message) {
   throw_error(dw, message, get_last_error_str());
 }
 
-void *dw_read_async(void *params) {
+void *read_async(void *params) {
   dw_read_params *readParams = (dw_read_params *)params;
   int fd = open(readParams->dw->fullPath, READ_PERMS);
 
@@ -136,7 +136,7 @@ void dw_read_pipe(
   dw->readParams->dw = dw;
   dw->readParams->callback = callback;
 
-  pthread_create(&dw->readThread, NULL, dw_read_async, (void *)dw->readParams);
+  pthread_create(&dw->readThread, NULL, read_async, (void *)dw->readParams);
   pthread_join(dw->readThread, NULL);
 }
 
