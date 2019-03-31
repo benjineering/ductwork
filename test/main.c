@@ -1,9 +1,9 @@
 //#include "../lib/munit/munit.h"
 #include "../src/ductwork.h"
 #include <stdio.h>
+#include <string.h>
 
 const char *requestedPath = "/Users/ben/Desktop/dw.fifo";
-int ACTUAL_PATH_LEN = 512;
 
 void main_error_handler(const char *msg) {
   printf("ERR: ");
@@ -11,18 +11,34 @@ void main_error_handler(const char *msg) {
   printf("\n");
 }
 
+void read_handler(dw_instance *dw, int len, bool timeout) {
+  char *readBuffer = (char *)malloc(READ_BUFFER_SIZE);
+  dw_copy_read_buffer(dw, &readBuffer, READ_BUFFER_SIZE);
+
+  printf("read worked: ");
+  printf("%s", readBuffer);
+  printf("\n");
+
+  free(readBuffer);
+}
+
 int main(int argc, const char* argv[]) {
-  char *actualPath = (char *)malloc(ACTUAL_PATH_LEN);
   dw_instance *dw = dw_init(requestedPath, main_error_handler, NULL);
-  int createOk = dw_create_pipe(dw, &actualPath, ACTUAL_PATH_LEN);
+  bool createOk = dw_create_pipe(dw);
 
   if (createOk) {
+    char *fullPath = (char *)malloc(FULL_PATH_SIZE);
+    dw_copy_full_path(dw, &fullPath, FULL_PATH_SIZE);
+
     printf("create worked: ");
-    printf("%s", actualPath);
+    printf("%s", fullPath);
     printf("\n");
+
+    free(fullPath);
   }
 
+  dw_read_pipe(dw, read_handler);
+
   dw_free(dw);
-  free(actualPath);
   return 0;
 }

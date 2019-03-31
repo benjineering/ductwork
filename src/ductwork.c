@@ -6,6 +6,22 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+struct dw_read_params {
+  dw_instance *dw;
+  void (*callback)(dw_instance *dw, int len, bool timeout);
+};
+
+struct dw_instance {
+  void *userData;
+  const char *path;
+  const char fullPath[FULL_PATH_SIZE];
+  void (*errorHandler)(const char * message);
+  pthread_t readThread;
+  char readBuffer[READ_BUFFER_SIZE];
+  dw_read_params *readParams;
+  // TODO: portable perms
+};
+
 const mode_t CREATE_PERMS = S_IRUSR | S_IWUSR;
 const mode_t READ_PERMS = S_IRUSR | O_RDONLY;
 const mode_t WRITE_PERMS = S_IWUSR | O_WRONLY;
@@ -28,7 +44,7 @@ char *get_last_error_str() {
 
 void throw_error(dw_instance *dw, const char *message, const char *innerMessage) {
   if (innerMessage == NULL) {
-    (dw->errorHandler)(message);
+    dw->errorHandler(message);
     return;
   }
 
@@ -39,7 +55,8 @@ void throw_error(dw_instance *dw, const char *message, const char *innerMessage)
   strcat(str, ERROR_SEP);
   strcat(str, innerMessage);
 
-  (dw->errorHandler)(innerMessage);
+  dw->errorHandler(str);
+  free(str);
 }
 
 void throw_last_error(dw_instance *dw, const char *message) {
@@ -47,35 +64,28 @@ void throw_last_error(dw_instance *dw, const char *message) {
 }
 
 void *dw_read_async(void *params) {
-  read_params *readParams = (read_params *)params;
-  dw_instance *dw = (dw_instance *)readParams->dw;
-
-  printf("open started\n");
-
-  int fd = open(dw->path, READ_PERMS);
-
-  printf("open done\n");
+  dw_read_params *readParams = (dw_read_params *)params;
+  int fd = open(readParams->dw->fullPath, READ_PERMS);
 
   if (fd < 0) {
-    throw_last_error(dw, "Error opening file");
+    throw_last_error(readParams->dw, "Error opening file");
     return NULL;
   }
 
-  size_t readResult = read(fd, (void *)dw->readBuffer, READ_BUFFER_SIZE);
-
-  printf("read done\n");
+  size_t readResult = read(
+    fd, 
+    (void *)readParams->dw->readBuffer,
+    READ_BUFFER_SIZE
+  );
 
   if (!readResult) {
-    throw_last_error(dw, "Error reading file");
+    throw_last_error(readParams->dw, "Error reading file");
     return NULL;
   }
 
   close(fd);
   fd = 0;
-    
-  printf("file closed\n");
-
-  (*readParams->callback)(readResult, false);
+  readParams->callback(readParams->dw, readResult, false);
   return NULL;
 }
 
@@ -89,44 +99,67 @@ dw_instance *dw_init(
   dw_instance *dw = (dw_instance *)malloc(sizeof(dw_instance));
   dw->path = requestedPath;
   dw->errorHandler = errorHandler;
+  dw->readParams = NULL;
+
+  if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
+    throw_last_error(dw, "Full path buffer overrun");
+    return NULL;
+  }
+
+  strcpy((char *)dw->fullPath, dw->path);
   return dw;
 }
 
 void dw_free(dw_instance *dw) {
+  if (dw->readParams)
+    free(dw->readParams);
+
   free(dw);
 }
 
-bool dw_create_pipe(
-  dw_instance *dw, 
-  char **actualPathBuf, 
-  size_t bufferLen
-) {
-  int result = mkfifo(dw->path, CREATE_PERMS);
+bool dw_create_pipe(dw_instance *dw) {
+  int result = mkfifo(dw->fullPath, CREATE_PERMS);
 
   if (result < 0) {
     throw_last_error(dw, "Couldn't create the pipe");
     return false;
   }
 
-  if ((strlen(dw->path) + 1) > bufferLen) {
-    throw_last_error(dw, "Full path buffer overrun");
-    return false;
-  }
-
-  strcpy(*actualPathBuf, dw->path);
   return true;
 }
 
 void dw_read_pipe(
-  dw_instance *dw, 
-  char **buffer, 
-  size_t length, 
-  void (*callback)(int len, bool timeout)
+  dw_instance *dw,
+  void (*callback)(dw_instance *dw, int len, bool timeout)
 ) {
-  dw->readParams = (read_params) {
-    .dw = dw,
-    .callback = NULL
-  };
+  dw->readParams = (dw_read_params *)malloc(sizeof(dw_read_params));
+  dw->readParams->dw = dw;
+  dw->readParams->callback = callback;
 
-  pthread_create(&dw->readThread, NULL, dw_read_async, (void *)&dw->readParams);
+  pthread_create(&dw->readThread, NULL, dw_read_async, (void *)dw->readParams);
+  pthread_join(dw->readThread, NULL);
+}
+
+int dw_copy_full_path(dw_instance *dw, char **buffer, int len) {
+  int fullPathLen = strlen(dw->path) + 1;
+
+  if (fullPathLen > len) {
+    throw_error(dw, "Full path buffer overrun", NULL);
+    return -1;
+  }
+
+  strncpy(*buffer, dw->path, fullPathLen);
+  return fullPathLen;
+}
+
+int dw_copy_read_buffer(dw_instance *dw, char **buffer, int len) {
+  int readBufferLen = strlen(dw->readBuffer) + 1;
+
+  if (readBufferLen > len) {
+    throw_error(dw, "Read buffer overrun", NULL);
+    return -1;
+  }
+
+  strncpy(*buffer, dw->readBuffer, readBufferLen);
+  return readBufferLen;
 }
