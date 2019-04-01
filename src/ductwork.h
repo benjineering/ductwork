@@ -6,16 +6,18 @@
 
 #define FULL_PATH_SIZE 4096
 #define THREAD_KILLER 9
-#define true 1
-#define false 0
-
 #define DEFAULT_READ_TIMEOUT_SECS 3
 
+#ifndef bool
 typedef int bool;
+#define true 1
+#define false 0
+#endif
+
 typedef struct dw_instance dw_instance;
 typedef struct dw_thread_info dw_thread_info;
 
-enum dw_instance_type { 
+enum dw_instance_type {
   DW_SERVER_TYPE,
   DW_CLIENT_TYPE
 };
@@ -35,5 +37,9 @@ void dw_open_pipe(
   void (*callback)(dw_instance *dw, int fd, bool timeout));
 
 const char *dw_get_full_path(dw_instance *dw);
+
+void *dw_get_user_data(dw_instance *dw);
+
+enum dw_instance_type dw_get_type(dw_instance *dw);
 
 #endif

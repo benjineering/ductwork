@@ -89,6 +89,7 @@ dw_instance *dw_init(
   dw->path = requestedPath;
   dw->errorHandler = errorHandler;
   dw->type = type;
+  dw->userData = userData;
 
   dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
   pthread_cond_init(&dw->openThread->condition, NULL);
@@ -152,4 +153,12 @@ void dw_open_pipe(
 
 const char *dw_get_full_path(dw_instance *dw) {
   return dw->fullPath;
+}
+
+void *dw_get_user_data(dw_instance *dw) {
+  return dw->userData;
+}
+
+enum dw_instance_type dw_get_type(dw_instance *dw) {
+  return dw->type;
 }

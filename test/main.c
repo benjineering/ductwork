@@ -1,4 +1,6 @@
-//#include "../lib/munit/munit.h"
+#define MUNIT_ENABLE_ASSERT_ALIASES
+#include "../lib/munit/munit.h"
+
 #include "../src/ductwork.h"
 #include <stdio.h>
 #include <string.h>
@@ -8,10 +10,11 @@ const char *REQUESTED_PATH = "/Users/ben/Desktop/dw.fifo";
 const char *WRITE_STRING = "p00tso\n";
 const int READ_BUFFER_SIZE = 512;
 
+const int PREV_ERROR_SIZE = 512;
+char prev_error[PREV_ERROR_SIZE];
+
 void main_error_handler(const char *msg) {
-  printf("ERR: ");
-  printf("%s", msg);
-  printf("\n");
+  strcpy(prev_error, msg);
 }
 
 void read_handler(dw_instance *dw, int fd, bool timeout) {
@@ -42,7 +45,57 @@ void write_handler(dw_instance *dw, int fd, bool timeout) {
   }
 }
 
-int main(int argc, const char* argv[]) {
+MunitResult init_server_test(const MunitParameter params[], void* fixture) {
+  
+  // TODO: setup and tear down
+  remove(REQUESTED_PATH);
+  prev_error[0] = '\0';
+
+  int userData = 5;
+
+  dw_instance *dw = dw_init(
+    DW_SERVER_TYPE, 
+    REQUESTED_PATH, 
+    main_error_handler, 
+    &userData
+  );
+
+  // TODO: type params?
+
+  assert_ptr(dw, !=, NULL);
+  assert_string_equal(prev_error, "");
+  assert_int(dw_get_type(dw), ==, DW_SERVER_TYPE);
+  assert_int(*(int *)dw_get_user_data(dw), ==, userData);
+  assert_string_equal(dw_get_full_path(dw), REQUESTED_PATH);
+  return MUNIT_OK;
+}
+
+MunitResult init_client_test(const MunitParameter params[], void* fixture) {
+  // TODO
+  return MUNIT_OK;
+}
+
+MunitTest tests[] = {
+  {
+    .name = "/init/server",
+    .test = init_server_test,
+    .options = MUNIT_TEST_OPTION_NONE
+  },
+  { .test = NULL }
+};
+
+MunitSuite suite = {
+  .prefix = "/dw",
+  .tests = tests,
+  .iterations = 1,
+  .options = MUNIT_SUITE_OPTION_NONE
+};
+
+int main(int argc, char *const *argv) {
+
+  return munit_suite_main(&suite, NULL, argc, argv);
+
+  /*
   if (argc != 2 ||
   (strcmp(argv[1], "read") != 0 && strcmp(argv[1], "write") != 0)) {
     printf("pass either read or write as a command line arg\n");
@@ -78,4 +131,5 @@ int main(int argc, const char* argv[]) {
   
   dw_free(dw);
   return 0;
+  */
 }
