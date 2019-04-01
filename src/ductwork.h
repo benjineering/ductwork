@@ -38,7 +38,7 @@ void dw_open_pipe(
 
 const char *dw_get_full_path(dw_instance *dw);
 
-void *dw_get_user_data(dw_instance *dw);
+void *dw_get_user_data(dw_instance *dw); // TODO: make const or copy
 
 enum dw_instance_type dw_get_type(dw_instance *dw);
 

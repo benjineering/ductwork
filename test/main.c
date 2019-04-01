@@ -4,11 +4,14 @@
 #include "../src/ductwork.h"
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 const char *REQUESTED_PATH = "/Users/ben/Desktop/dw.fifo";
 const char *WRITE_STRING = "p00tso\n";
 const int READ_BUFFER_SIZE = 512;
+int userData = 5;
 
 const int PREV_ERROR_SIZE = 512;
 char prev_error[PREV_ERROR_SIZE];
@@ -45,22 +48,26 @@ void write_handler(dw_instance *dw, int fd, bool timeout) {
   }
 }
 
-MunitResult init_server_test(const MunitParameter params[], void* fixture) {
-  
-  // TODO: setup and tear down
+static void* test_setup(const MunitParameter params[], void* user_data) {
   remove(REQUESTED_PATH);
   prev_error[0] = '\0';
 
-  int userData = 5;
-
-  dw_instance *dw = dw_init(
+  return dw_init(
     DW_SERVER_TYPE, 
     REQUESTED_PATH, 
     main_error_handler, 
     &userData
   );
+}
 
-  // TODO: type params?
+static void test_tear_down(void* fixture) {
+  dw_free((dw_instance *)fixture);
+}
+
+MunitResult init_server_test(const MunitParameter params[], void* fixture) {
+  dw_instance *dw = (dw_instance *)fixture;
+
+  // TODO: type params
 
   assert_ptr(dw, !=, NULL);
   assert_string_equal(prev_error, "");
@@ -70,8 +77,16 @@ MunitResult init_server_test(const MunitParameter params[], void* fixture) {
   return MUNIT_OK;
 }
 
-MunitResult init_client_test(const MunitParameter params[], void* fixture) {
-  // TODO
+MunitResult create_pipe_test(const MunitParameter params[], void* fixture) {  
+  dw_instance *dw = (dw_instance *)fixture;
+  bool success = dw_create_pipe(dw);
+  assert(success);
+
+  struct stat statBuf;
+  int statResult = stat(dw_get_full_path(dw), &statBuf);
+  assert_int(statResult, ==, 0);
+  assert_int(statBuf.st_mode & S_IFIFO, ==, S_IFIFO);
+
   return MUNIT_OK;
 }
 
@@ -79,7 +94,16 @@ MunitTest tests[] = {
   {
     .name = "/init/server",
     .test = init_server_test,
-    .options = MUNIT_TEST_OPTION_NONE
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = test_setup,
+    .tear_down = test_tear_down
+  },
+  {
+    .name = "/create-pipe",
+    .test = create_pipe_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = test_setup,
+    .tear_down = test_tear_down
   },
   { .test = NULL }
 };
