@@ -2,16 +2,22 @@
 #define DUCTWORK_H
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <pthread.h>
 
 #define FULL_PATH_SIZE 4096
 #define READ_BUFFER_SIZE 4096
 #define WRITE_BUFFER_SIZE 4096
+#define THREAD_KILLER 9
+#define true 1
+#define false 0
 
+#define DEFAULT_READ_TIMEOUT_SECS 3
+
+typedef int bool;
 typedef struct dw_instance dw_instance;
 typedef struct dw_read_params dw_read_params;
 typedef struct dw_write_params dw_write_params;
+typedef struct dw_thread_info dw_thread_info;
 
 dw_instance *dw_init(
   const char *requestedPath,

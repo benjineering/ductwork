@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 struct dw_instance {
@@ -11,8 +12,8 @@ struct dw_instance {
   const char *path;
   const char fullPath[FULL_PATH_SIZE];
   void (*errorHandler)(const char * message);
-  pthread_t readThread;
   pthread_t writeThread;
+  dw_thread_info *readThread;
   char readBuffer[READ_BUFFER_SIZE];
   char writeBuffer[WRITE_BUFFER_SIZE];
   size_t writeSize;
@@ -29,6 +30,12 @@ struct dw_read_params {
 struct dw_write_params {
   dw_instance *dw;
   void (*callback)(dw_instance *dw, bool timeout);
+};
+
+struct dw_thread_info {
+  pthread_t thread;
+  pthread_cond_t condition;
+  pthread_mutex_t mutex;
 };
 
 const mode_t CREATE_PERMS = S_IRUSR | S_IWUSR;
@@ -81,6 +88,9 @@ void *read_async(void *params) {
     return NULL;
   }
 
+  // TODO: check mutex first
+  // if (pthread_mutex_trylock == EBUSY)
+
   size_t readResult = read(
     fd, 
     (void *)readParams->dw->readBuffer,
@@ -94,7 +104,14 @@ void *read_async(void *params) {
 
   close(fd);
   fd = 0;
+
+  // TODO: check mutex first
+  // if (pthread_mutex_trylock == EBUSY)
+  pthread_cond_signal(&readParams->dw->readThread->condition);
   readParams->callback(readParams->dw, readResult, false);
+
+  // TODO: pthread_cond_signal(&condition);
+
   return NULL;
 }
 
@@ -137,6 +154,10 @@ dw_instance *dw_init(
   dw->readParams = NULL;
   dw->writeParams = NULL;
 
+  dw->readThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
+  pthread_cond_init(&dw->readThread->condition, NULL);
+  pthread_mutex_init(&dw->readThread->mutex, NULL); // TODO: use an errchkmutex?
+
   if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
     throw_last_error(dw, "Full path buffer overrun");
     return NULL;
@@ -150,6 +171,7 @@ void dw_free(dw_instance *dw) {
   if (dw->readParams)
     free(dw->readParams);
 
+  free(dw->readThread);
   free(dw);
 }
 
@@ -172,8 +194,29 @@ void dw_read_pipe(
   dw->readParams->dw = dw;
   dw->readParams->callback = callback;
 
-  pthread_create(&dw->readThread, NULL, read_async, (void *)dw->readParams);
-  pthread_join(dw->readThread, NULL);
+  pthread_create(
+    &dw->readThread->thread, 
+    NULL, 
+    read_async, 
+    (void *)dw->readParams
+  );
+
+  struct timespec timeout;
+  clock_gettime(CLOCK_REALTIME, &timeout);
+  timeout.tv_sec += DEFAULT_READ_TIMEOUT_SECS;
+  pthread_mutex_lock(&dw->readThread->mutex);
+
+  int waitResult = pthread_cond_timedwait(
+    &dw->readThread->condition, 
+    &dw->readThread->mutex, 
+    &timeout);
+
+  if (waitResult == ETIMEDOUT) {
+    pthread_kill(dw->readThread->thread, THREAD_KILLER);
+    dw->readParams->callback(dw, 0, true);
+  }
+
+  pthread_mutex_unlock(&dw->readThread->mutex);
   free(dw->readParams);
   dw->readParams = NULL;
 }
