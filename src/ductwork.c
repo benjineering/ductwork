@@ -8,28 +8,13 @@
 #include <unistd.h>
 
 struct dw_instance {
+  enum dw_instance_type type;
   void *userData;
   const char *path;
   const char fullPath[FULL_PATH_SIZE];
   void (*errorHandler)(const char * message);
-  pthread_t writeThread;
-  dw_thread_info *readThread;
-  char readBuffer[READ_BUFFER_SIZE];
-  char writeBuffer[WRITE_BUFFER_SIZE];
-  size_t writeSize;
-  dw_read_params *readParams;
-  dw_write_params *writeParams;
-  // TODO: portable perms
-};
-
-struct dw_read_params {
-  dw_instance *dw;
-  void (*callback)(dw_instance *dw, int len, bool timeout);
-};
-
-struct dw_write_params {
-  dw_instance *dw;
-  void (*callback)(dw_instance *dw, bool timeout);
+  void (*openCallback)(dw_instance *dw, int fd, bool timeout);
+  dw_thread_info *openThread;
 };
 
 struct dw_thread_info {
@@ -79,71 +64,25 @@ void throw_last_error(dw_instance *dw, const char *message) {
   throw_error(dw, message, get_last_error_str());
 }
 
-void *read_async(void *params) {
-  dw_read_params *readParams = (dw_read_params *)params;
-  int fd = open(readParams->dw->fullPath, READ_PERMS);
-
-  if (fd < 0) {
-    throw_last_error(readParams->dw, "Error opening file");
-    return NULL;
-  }
+void *open_async(void *params) {
+  dw_instance *dw = (dw_instance *)params;
+  int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
+  int fd = open(dw->fullPath, perms);
 
   // TODO: check mutex first
   // if (pthread_mutex_trylock == EBUSY)
-
-  size_t readResult = read(
-    fd, 
-    (void *)readParams->dw->readBuffer,
-    READ_BUFFER_SIZE
-  );
-
-  if (readResult < 0) {
-    throw_last_error(readParams->dw, "Error reading file");
-    return NULL;
-  }
-
-  close(fd);
-  fd = 0;
-
-  // TODO: check mutex first
-  // if (pthread_mutex_trylock == EBUSY)
-  pthread_cond_signal(&readParams->dw->readThread->condition);
-  readParams->callback(readParams->dw, readResult, false);
+  pthread_cond_signal(&dw->openThread->condition);
+  dw->openCallback(dw, fd, false);
 
   // TODO: pthread_cond_signal(&condition);
 
   return NULL;
 }
 
-void *write_async(void *params) {
-  dw_write_params *writeParams = (dw_write_params *)params;
-  int fd = open(writeParams->dw->fullPath, WRITE_PERMS);
-
-  if (fd < 0) {
-    throw_last_error(writeParams->dw, "Error opening file");
-    return NULL;
-  }
-
-  size_t writeResult = write(
-    fd, 
-    writeParams->dw->writeBuffer, 
-    writeParams->dw->writeSize
-  );
-
-  if (writeResult < 0) {
-    throw_last_error(writeParams->dw, "Error writing file");
-    return NULL;
-  }
-
-  close(fd);
-  fd = 0;
-  writeParams->callback(writeParams->dw, false);
-  return NULL;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 dw_instance *dw_init(
+  enum dw_instance_type type,
   const char *requestedPath,
   void (*errorHandler)(const char * message),
   void *userData
@@ -151,12 +90,11 @@ dw_instance *dw_init(
   dw_instance *dw = (dw_instance *)malloc(sizeof(dw_instance));
   dw->path = requestedPath;
   dw->errorHandler = errorHandler;
-  dw->readParams = NULL;
-  dw->writeParams = NULL;
+  dw->type = type;
 
-  dw->readThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
-  pthread_cond_init(&dw->readThread->condition, NULL);
-  pthread_mutex_init(&dw->readThread->mutex, NULL); // TODO: use an errchkmutex?
+  dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
+  pthread_cond_init(&dw->openThread->condition, NULL);
+  pthread_mutex_init(&dw->openThread->mutex, NULL); // TODO: use an errchkmutex?
 
   if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
     throw_last_error(dw, "Full path buffer overrun");
@@ -168,14 +106,16 @@ dw_instance *dw_init(
 }
 
 void dw_free(dw_instance *dw) {
-  if (dw->readParams)
-    free(dw->readParams);
-
-  free(dw->readThread);
+  free(dw->openThread);
   free(dw);
 }
 
 bool dw_create_pipe(dw_instance *dw) {
+  if (dw->type == DW_CLIENT_TYPE) {
+    throw_last_error(dw, "Only a DW_SERVER_TYPE can create a pipe");
+    return false;
+  }
+
   int result = mkfifo(dw->fullPath, CREATE_PERMS);
 
   if (result < 0) {
@@ -186,57 +126,30 @@ bool dw_create_pipe(dw_instance *dw) {
   return true;
 }
 
-void dw_read_pipe(
+void dw_open_pipe(
   dw_instance *dw,
-  void (*callback)(dw_instance *dw, int len, bool timeout)
+  void (*callback)(dw_instance *dw, int fd, bool timeout)
 ) {
-  dw->readParams = (dw_read_params *)malloc(sizeof(dw_read_params));
-  dw->readParams->dw = dw;
-  dw->readParams->callback = callback;
-
-  pthread_create(
-    &dw->readThread->thread, 
-    NULL, 
-    read_async, 
-    (void *)dw->readParams
-  );
+  dw->openCallback = callback;
+  pthread_create(&dw->openThread->thread, NULL, open_async, (void *)dw);
 
   struct timespec timeout;
   clock_gettime(CLOCK_REALTIME, &timeout);
   timeout.tv_sec += DEFAULT_READ_TIMEOUT_SECS;
-  pthread_mutex_lock(&dw->readThread->mutex);
+  pthread_mutex_lock(&dw->openThread->mutex);
 
   int waitResult = pthread_cond_timedwait(
-    &dw->readThread->condition, 
-    &dw->readThread->mutex, 
-    &timeout);
+    &dw->openThread->condition, 
+    &dw->openThread->mutex, 
+    &timeout
+  );
 
   if (waitResult == ETIMEDOUT) {
-    pthread_kill(dw->readThread->thread, THREAD_KILLER);
-    dw->readParams->callback(dw, 0, true);
+    pthread_kill(dw->openThread->thread, THREAD_KILLER);
+    dw->openCallback(dw, 0, true);
   }
 
-  pthread_mutex_unlock(&dw->readThread->mutex);
-  free(dw->readParams);
-  dw->readParams = NULL;
-}
-
-void dw_write_pipe(
-  dw_instance *dw, 
-  const char *buffer, 
-  size_t len,
-  void (*callback)(dw_instance *dw, bool timeout)
-) {
-  dw->writeParams = (dw_write_params *)malloc(sizeof(dw_write_params));
-  dw->writeParams->dw = dw;
-  dw->writeParams->callback = callback;
-  memcpy(dw->writeBuffer, buffer, len);
-  dw->writeSize = len;
-
-  pthread_create(&dw->writeThread, NULL, write_async, (void *)dw->writeParams);
-  pthread_join(dw->writeThread, NULL);
-  free(dw->writeParams);
-  dw->writeParams = NULL;
+  pthread_mutex_unlock(&dw->openThread->mutex);
 }
 
 int dw_copy_full_path(dw_instance *dw, char *buffer, int len) {
@@ -249,16 +162,4 @@ int dw_copy_full_path(dw_instance *dw, char *buffer, int len) {
 
   strncpy(buffer, dw->path, fullPathLen);
   return fullPathLen;
-}
-
-int dw_copy_read_buffer(dw_instance *dw, char *buffer, int len) {
-  int readBufferLen = strlen(dw->readBuffer) + 1;
-
-  if (readBufferLen > len) {
-    throw_error(dw, "Read buffer overrun", NULL);
-    return -1;
-  }
-
-  strncpy(buffer, dw->readBuffer, readBufferLen);
-  return readBufferLen;
 }
