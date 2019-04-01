@@ -69,13 +69,11 @@ void *open_async(void *params) {
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
   int fd = open(dw->fullPath, perms);
 
-  // TODO: check mutex first
-  // if (pthread_mutex_trylock == EBUSY)
+  if (!fd)
+    throw_last_error(dw, "Error opening file");
+
   pthread_cond_signal(&dw->openThread->condition);
   dw->openCallback(dw, fd, false);
-
-  // TODO: pthread_cond_signal(&condition);
-
   return NULL;
 }
 
@@ -94,7 +92,7 @@ dw_instance *dw_init(
 
   dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
   pthread_cond_init(&dw->openThread->condition, NULL);
-  pthread_mutex_init(&dw->openThread->mutex, NULL); // TODO: use an errchkmutex?
+  pthread_mutex_init(&dw->openThread->mutex, NULL);
 
   if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
     throw_last_error(dw, "Full path buffer overrun");
@@ -144,12 +142,12 @@ void dw_open_pipe(
     &timeout
   );
 
+  pthread_mutex_unlock(&dw->openThread->mutex);
+
   if (waitResult == ETIMEDOUT) {
     pthread_kill(dw->openThread->thread, THREAD_KILLER);
     dw->openCallback(dw, 0, true);
   }
-
-  pthread_mutex_unlock(&dw->openThread->mutex);
 }
 
 const char *dw_get_full_path(dw_instance *dw) {
