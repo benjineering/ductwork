@@ -60,8 +60,7 @@ int main(int argc, const char* argv[]) {
   );
 
   if (type == DW_SERVER_TYPE) {
-    char *fullPath = (char *)malloc(FULL_PATH_SIZE);
-    dw_copy_full_path(dw, fullPath, FULL_PATH_SIZE);
+    const char *fullPath = dw_get_full_path(dw);
     remove(fullPath);
     bool createOk = dw_create_pipe(dw);
 
@@ -69,8 +68,6 @@ int main(int argc, const char* argv[]) {
       printf("create worked: ");
       printf("%s", fullPath);
       printf("\n");
-
-      free(fullPath);
 
       dw_open_pipe(dw, write_handler);
     }

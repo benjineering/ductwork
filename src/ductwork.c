@@ -152,14 +152,6 @@ void dw_open_pipe(
   pthread_mutex_unlock(&dw->openThread->mutex);
 }
 
-int dw_copy_full_path(dw_instance *dw, char *buffer, int len) {
-  int fullPathLen = strlen(dw->path) + 1;
-
-  if (fullPathLen > len) {
-    throw_error(dw, "Full path buffer overrun", NULL);
-    return -1;
-  }
-
-  strncpy(buffer, dw->path, fullPathLen);
-  return fullPathLen;
+const char *dw_get_full_path(dw_instance *dw) {
+  return dw->fullPath;
 }

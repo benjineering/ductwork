@@ -34,6 +34,6 @@ void dw_open_pipe(
   dw_instance *dw,
   void (*callback)(dw_instance *dw, int fd, bool timeout));
 
-int dw_copy_full_path(dw_instance *dw, char *buffer, int len);
+const char *dw_get_full_path(dw_instance *dw);
 
 #endif
