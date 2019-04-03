@@ -3,10 +3,12 @@
 
 #include "common.h"
 
-MunitResult server_init_test(const MunitParameter params[], void* fixture);
+DW_TEST(server_init_test);
 
-MunitResult server_create_test(const MunitParameter params[], void* fixture);
+DW_TEST(server_create_test);
 
-MunitResult server_open_timeout_test(const MunitParameter params[], void* fixture);
+DW_TEST(server_open_timeout_test);
+
+DW_TEST(server_open_success_test);
 
 #endif

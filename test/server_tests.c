@@ -19,7 +19,7 @@ void open_handler(dw_instance *dw, int fd, bool timeout) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-MunitResult server_init_test(const MunitParameter params[], void* fixture) {
+DW_TEST(server_init_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
   // TODO: type params
@@ -32,7 +32,7 @@ MunitResult server_init_test(const MunitParameter params[], void* fixture) {
   return MUNIT_OK;
 }
 
-MunitResult server_create_test(const MunitParameter params[], void* fixture) {
+DW_TEST(server_create_test) {
   dw_instance *dw = (dw_instance *)fixture;
   bool success = dw_create_pipe(dw, OPEN_TIMEOUT_MS);
   assert(success);
@@ -44,7 +44,7 @@ MunitResult server_create_test(const MunitParameter params[], void* fixture) {
   return MUNIT_OK;
 }
 
-MunitResult server_open_timeout_test(const MunitParameter params[], void* fixture) {
+DW_TEST(server_open_timeout_test) {
   dw_instance *server = (dw_instance *)fixture;
   dw_create_pipe(server, OPEN_TIMEOUT_MS);
   dw_open_pipe(server, -1, open_handler);
