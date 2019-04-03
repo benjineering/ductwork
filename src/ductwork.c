@@ -11,10 +11,11 @@ struct dw_instance {
   enum dw_instance_type type;
   void *userData;
   const char *path;
-  const char fullPath[FULL_PATH_SIZE];
+  const char fullPath[DW_FULL_PATH_SIZE];
   void (*errorHandler)(const char * message);
   void (*openCallback)(dw_instance *dw, int fd, bool timeout);
   dw_thread_info *openThread;
+  int defaultTimeoutMs;
 };
 
 struct dw_thread_info {
@@ -28,6 +29,7 @@ const mode_t READ_PERMS = S_IRUSR | O_RDONLY;
 const mode_t WRITE_PERMS = S_IWUSR | O_WRONLY;
 
 const char *ERROR_SEP = ": ";
+const int THREAD_KILLER = 9;
 
 void DBG(const char *str) {
   printf("DBG ");
@@ -95,7 +97,7 @@ dw_instance *dw_init(
   pthread_cond_init(&dw->openThread->condition, NULL);
   pthread_mutex_init(&dw->openThread->mutex, NULL);
 
-  if ((strlen(dw->path) + 1) > FULL_PATH_SIZE) {
+  if ((strlen(dw->path) + 1) > DW_FULL_PATH_SIZE) {
     throw_last_error(dw, "Full path buffer overrun");
     return NULL;
   }
@@ -109,12 +111,13 @@ void dw_free(dw_instance *dw) {
   free(dw);
 }
 
-bool dw_create_pipe(dw_instance *dw) {
+bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
   if (dw->type == DW_CLIENT_TYPE) {
     throw_last_error(dw, "Only a DW_SERVER_TYPE can create a pipe");
     return false;
   }
 
+  dw->defaultTimeoutMs = defaultTimeoutMs;
   int result = mkfifo(dw->fullPath, CREATE_PERMS);
 
   if (result < 0) {
@@ -127,14 +130,18 @@ bool dw_create_pipe(dw_instance *dw) {
 
 void dw_open_pipe(
   dw_instance *dw,
+  int overrideTimeoutMs,
   void (*callback)(dw_instance *dw, int fd, bool timeout)
 ) {
   dw->openCallback = callback;
+
   pthread_create(&dw->openThread->thread, NULL, open_async, (void *)dw);
 
   struct timespec timeout;
+  int timeoutMs = overrideTimeoutMs ? overrideTimeoutMs : dw->defaultTimeoutMs;
   clock_gettime(CLOCK_REALTIME, &timeout);
-  timeout.tv_sec += DEFAULT_READ_TIMEOUT_SECS;
+  timeout.tv_nsec += timeoutMs * 1000;
+
   pthread_mutex_lock(&dw->openThread->mutex);
 
   int waitResult = pthread_cond_timedwait(
@@ -157,6 +164,10 @@ const char *dw_get_full_path(dw_instance *dw) {
 
 void *dw_get_user_data(dw_instance *dw) {
   return dw->userData;
+}
+
+void dw_set_user_data(dw_instance *dw, void *userData) {
+  dw->userData = userData;
 }
 
 enum dw_instance_type dw_get_type(dw_instance *dw) {

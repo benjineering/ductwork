@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define FULL_PATH_SIZE 4096
-#define THREAD_KILLER 9
-#define DEFAULT_READ_TIMEOUT_SECS 3
+#define DW_FULL_PATH_SIZE 4096
 
 #ifndef bool
 typedef int bool;
@@ -30,15 +28,18 @@ dw_instance *dw_init(
 
 void dw_free(dw_instance *dw);
 
-bool dw_create_pipe(dw_instance *dw);
+bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs);
 
 void dw_open_pipe(
   dw_instance *dw,
+  int overrideTimeoutMs,
   void (*callback)(dw_instance *dw, int fd, bool timeout));
 
 const char *dw_get_full_path(dw_instance *dw);
 
-void *dw_get_user_data(dw_instance *dw); // TODO: make const or copy
+void *dw_get_user_data(dw_instance *dw);
+
+void dw_set_user_data(dw_instance *dw, void *userData);
 
 enum dw_instance_type dw_get_type(dw_instance *dw);
 
