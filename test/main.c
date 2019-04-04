@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 void main_error_handler(const char *msg) {
+  printf("\nERR: %s\n", msg);
   strcpy(prev_error, msg);
 }
 
@@ -43,7 +44,43 @@ static void test_tear_down(void* fixture) {
   dw_free((dw_instance *)fixture);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+DW_TEST(add_ms_999_test) {
+  struct timespec time = {
+    .tv_nsec = 12,
+    .tv_sec = 3
+  };
+
+  dw_add_ms(&time, 999);
+  assert_int(time.tv_nsec, ==, 999012);
+  assert_int(time.tv_sec, ==, 3);
+  return MUNIT_OK;
+}
+
+DW_TEST(add_ms_1001_test) {
+  struct timespec time = {
+    .tv_nsec = 1028,
+    .tv_sec = 800
+  };
+
+  dw_add_ms(&time, 1001);
+  assert_int(time.tv_nsec, ==, 2028);
+  assert_int(time.tv_sec, ==, 801);
+  return MUNIT_OK;
+}
+
 MunitTest tests[] = {
+  {
+    .name = "/add-ms/999",
+    .test = add_ms_999_test,
+    .options = MUNIT_TEST_OPTION_NONE
+  },
+  {
+    .name = "/add-ms/1001",
+    .test = add_ms_1001_test,
+    .options = MUNIT_TEST_OPTION_NONE
+  },
   {
     .name = "/server/init",
     .test = server_init_test,
@@ -61,6 +98,13 @@ MunitTest tests[] = {
   {
     .name = "/server/open/timeout",
     .test = server_open_timeout_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = test_setup,
+    .tear_down = test_tear_down
+  },
+  {
+    .name = "/server/open/success",
+    .test = server_open_success_test,
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = test_setup,
     .tear_down = test_tear_down

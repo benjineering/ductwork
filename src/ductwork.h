@@ -1,8 +1,9 @@
 #ifndef DUCTWORK_H
 #define DUCTWORK_H
 
-#include <stdlib.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define DW_FULL_PATH_SIZE 4096
 
@@ -42,5 +43,7 @@ void *dw_get_user_data(dw_instance *dw);
 void dw_set_user_data(dw_instance *dw, void *userData);
 
 enum dw_instance_type dw_get_type(dw_instance *dw);
+
+void dw_add_ms(struct timespec *time, int ms);
 
 #endif

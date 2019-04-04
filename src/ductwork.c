@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 
 struct dw_instance {
@@ -66,8 +65,7 @@ void throw_last_error(dw_instance *dw, const char *message) {
   throw_error(dw, message, get_last_error_str());
 }
 
-void *open_async(void *params) {
-  dw_instance *dw = (dw_instance *)params;
+void *open_async(dw_instance *dw) {
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
   int fd = open(dw->fullPath, perms);
 
@@ -135,12 +133,18 @@ void dw_open_pipe(
 ) {
   dw->openCallback = callback;
 
-  pthread_create(&dw->openThread->thread, NULL, open_async, (void *)dw);
-
   struct timespec timeout;
-  int timeoutMs = overrideTimeoutMs ? overrideTimeoutMs : dw->defaultTimeoutMs;
+  int timeoutMs = overrideTimeoutMs > -1 
+    ? overrideTimeoutMs : dw->defaultTimeoutMs;
   clock_gettime(CLOCK_REALTIME, &timeout);
-  timeout.tv_nsec += timeoutMs * 1000;
+  dw_add_ms(&timeout, timeoutMs);
+
+  pthread_create(
+    &dw->openThread->thread, 
+    NULL, 
+    (void *(*)(void *))open_async, 
+    (void *)dw
+  );
 
   pthread_mutex_lock(&dw->openThread->mutex);
 
@@ -172,4 +176,16 @@ void dw_set_user_data(dw_instance *dw, void *userData) {
 
 enum dw_instance_type dw_get_type(dw_instance *dw) {
   return dw->type;
+}
+
+void dw_add_ms(struct timespec *time, int ms) {
+  if (ms < 1000) {
+    time->tv_nsec += ms * 1000;
+  }
+  else {
+    // TODO: this more efficiently
+    int secs = ms / 1000;
+    time->tv_sec += secs;
+    time->tv_nsec += (ms - (secs * 1000)) * 1000;
+  }
 }
