@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 const int OPEN_TIMEOUT_MS = 500;
+const char *CONTENT = "p00ts";
 
 int open_fd;
 bool open_timeout;
@@ -19,11 +20,39 @@ void open_handler(dw_instance *dw, int fd, bool timeout) {
   open_timeout = timeout;
 }
 
-void *client_read_handler(dw_instance *dw) {
+void *read_thread_worker(dw_instance *dw) {
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
   read(fd, read_buffer, 512);
   close(fd);
   return NULL;
+}
+
+void *write_thread_worker(dw_instance *dw) {
+  dw_open_pipe(dw, 500, open_handler);
+  write(open_fd, CONTENT, strlen(CONTENT));
+  close(open_fd);
+  return NULL;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void* test_setup(const MunitParameter params[], void* user_data) {
+  remove(REQUESTED_PATH);
+  prev_error[0] = '\0';
+  open_fd = 0;
+  open_timeout = true;
+  read_buffer[0] = '\0';
+
+  return dw_init(
+    DW_SERVER_TYPE, 
+    REQUESTED_PATH, 
+    main_error_handler, 
+    &userData
+  );
+}
+
+void test_tear_down(void* fixture) {
+  dw_free((dw_instance *)fixture);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,27 +92,52 @@ DW_TEST(server_open_timeout_test) {
   return MUNIT_OK;
 }
 
-DW_TEST(server_open_success_test) {
+DW_TEST(server_open_read_first_test) {
   dw_instance *server = (dw_instance *)fixture;
   dw_create_pipe(server, OPEN_TIMEOUT_MS);
-  dw_open_pipe(server, -1, open_handler);
 
-  const char *str = "p00ts";
-  write(open_fd, str, strlen(str));
-
-  pthread_t clientThread;
+  // read
+  pthread_t readThread;
   pthread_create(
-    &clientThread, 
+    &readThread, 
     NULL,
-    (void *(*)(void *))client_read_handler, 
-    NULL
+    (void *(*)(void *))read_thread_worker, 
+    (void *)server
   );
-  pthread_join(clientThread, NULL);
 
+  // write
+  dw_open_pipe(server, 500, open_handler);
   assert(!open_timeout);
   assert(open_fd);
-  assert_string_equal(read_buffer, str);
+  write(open_fd, CONTENT, strlen(CONTENT));
 
+  pthread_join(readThread, NULL);
+  assert_string_equal(read_buffer, CONTENT);
   close(open_fd);
+  return MUNIT_OK;
+}
+
+DW_TEST(server_open_write_first_test) {
+  dw_instance *server = (dw_instance *)fixture;
+  dw_create_pipe(server, OPEN_TIMEOUT_MS);
+
+  // write
+  pthread_t writeThread;
+  pthread_create(
+    &writeThread, 
+    NULL,
+    (void *(*)(void *))write_thread_worker, 
+    (void *)server
+  );
+
+  // read
+  int fd = open(dw_get_full_path(server), S_IRUSR | O_RDONLY);
+  read(fd, read_buffer, 512);
+  close(fd);
+
+  pthread_join(writeThread, NULL);
+  assert(!open_timeout);
+  assert(open_fd);
+  assert_string_equal(read_buffer, CONTENT);
   return MUNIT_OK;
 }

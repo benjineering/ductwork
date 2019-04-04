@@ -30,12 +30,6 @@ const mode_t WRITE_PERMS = S_IWUSR | O_WRONLY;
 const char *ERROR_SEP = ": ";
 const int THREAD_KILLER = 9;
 
-void DBG(const char *str) {
-  printf("DBG ");
-  printf("%s", str);
-  printf("\n");
-}
-
 char *get_error_str(int errorNum) {
   return strerror(errorNum);
 }
@@ -146,6 +140,7 @@ void dw_open_pipe(
     (void *)dw
   );
 
+  // TODO: better mutexing
   pthread_mutex_lock(&dw->openThread->mutex);
 
   int waitResult = pthread_cond_timedwait(
