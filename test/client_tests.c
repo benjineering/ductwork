@@ -25,7 +25,7 @@ void *client_read_thread_worker(dw_instance *dw) {
 }
 
 void *client_write_thread_worker(dw_instance *dw) {
-  int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
+  int fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
   write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
   close(fd);
   return NULL;
@@ -106,11 +106,11 @@ DWT_TEST(client_open_read_first_test) {
   // write
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
   write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
-  assert(!open_timeout);
-  assert(open_fd);
   close(fd);
 
   pthread_join(readThread, NULL);
+  assert(!open_timeout);
+  assert(open_fd);
   assert_string_equal(read_buffer, DWT_CONTENT);
   return MUNIT_OK;
 }
@@ -128,13 +128,13 @@ DWT_TEST(client_open_write_first_test) {
   );
 
   // read
-  int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
-  read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
-  close(fd);
-
-  pthread_join(writeThread, NULL);
+  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
   assert(!open_timeout);
   assert(open_fd);
+  read(open_fd, read_buffer, DWT_READ_BUFFER_SIZE);
+  close(open_fd);
+
+  pthread_join(writeThread, NULL);
   assert_string_equal(read_buffer, DWT_CONTENT);
   return MUNIT_OK;
 }
