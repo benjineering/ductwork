@@ -4,14 +4,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-const int OPEN_TIMEOUT_MS = 500;
-const char *CONTENT = "p00ts";
-
 int open_fd;
 bool open_timeout;
 char read_buffer[512];
 
-void open_handler(dw_instance *dw, int fd, bool timeout) {
+void server_open_handler(dw_instance *dw, int fd, bool timeout) {
   if (timeout)
     open_fd = -1;
   else
@@ -20,15 +17,15 @@ void open_handler(dw_instance *dw, int fd, bool timeout) {
   open_timeout = timeout;
 }
 
-void *read_thread_worker(dw_instance *dw) {
+void *server_read_thread_worker(dw_instance *dw) {
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
   read(fd, read_buffer, 512);
   close(fd);
   return NULL;
 }
 
-void *write_thread_worker(dw_instance *dw) {
-  dw_open_pipe(dw, 500, open_handler);
+void *server_write_thread_worker(dw_instance *dw) {
+  dw_open_pipe(dw, 500, server_open_handler);
   write(open_fd, CONTENT, strlen(CONTENT));
   close(open_fd);
   return NULL;
@@ -36,7 +33,7 @@ void *write_thread_worker(dw_instance *dw) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void* test_setup(const MunitParameter params[], void* user_data) {
+void* server_setup(const MunitParameter params[], void* user_data) {
   remove(REQUESTED_PATH);
   prev_error[0] = '\0';
   open_fd = 0;
@@ -51,7 +48,7 @@ void* test_setup(const MunitParameter params[], void* user_data) {
   );
 }
 
-void test_tear_down(void* fixture) {
+void server_tear_down(void* fixture) {
   dw_free((dw_instance *)fixture);
 }
 
@@ -85,7 +82,7 @@ DW_TEST(server_create_test) {
 DW_TEST(server_open_timeout_test) {
   dw_instance *server = (dw_instance *)fixture;
   dw_create_pipe(server, OPEN_TIMEOUT_MS);
-  dw_open_pipe(server, -1, open_handler);
+  dw_open_pipe(server, -1, server_open_handler);
   assert(open_timeout);
   assert_int(open_fd, ==, -1);
   close(open_fd);
@@ -101,12 +98,12 @@ DW_TEST(server_open_read_first_test) {
   pthread_create(
     &readThread, 
     NULL,
-    (void *(*)(void *))read_thread_worker, 
+    (void *(*)(void *))server_read_thread_worker, 
     (void *)server
   );
 
   // write
-  dw_open_pipe(server, 500, open_handler);
+  dw_open_pipe(server, 500, server_open_handler);
   assert(!open_timeout);
   assert(open_fd);
   write(open_fd, CONTENT, strlen(CONTENT));
@@ -126,7 +123,7 @@ DW_TEST(server_open_write_first_test) {
   pthread_create(
     &writeThread, 
     NULL,
-    (void *(*)(void *))write_thread_worker, 
+    (void *(*)(void *))server_write_thread_worker, 
     (void *)server
   );
 

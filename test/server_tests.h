@@ -3,9 +3,9 @@
 
 #include "common.h"
 
-void* test_setup(const MunitParameter params[], void* user_data);
+void* server_setup(const MunitParameter params[], void* user_data);
 
-void test_tear_down(void* fixture);
+void server_tear_down(void* fixture);
 
 DW_TEST(server_init_test);
 

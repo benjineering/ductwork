@@ -1,6 +1,8 @@
 #ifndef DUCTWORK_H
 #define DUCTWORK_H
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <time.h>

@@ -1,6 +1,7 @@
 #include "ductwork.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -26,9 +27,7 @@ struct dw_thread_info {
 const mode_t CREATE_PERMS = S_IRUSR | S_IWUSR;
 const mode_t READ_PERMS = S_IRUSR | O_RDONLY;
 const mode_t WRITE_PERMS = S_IWUSR | O_WRONLY;
-
 const char *ERROR_SEP = ": ";
-const int THREAD_KILLER = 9;
 
 char *get_error_str(int errorNum) {
   return strerror(errorNum);
@@ -152,7 +151,7 @@ void dw_open_pipe(
   pthread_mutex_unlock(&dw->openThread->mutex);
 
   if (waitResult == ETIMEDOUT) {
-    pthread_kill(dw->openThread->thread, THREAD_KILLER);
+    pthread_cancel(dw->openThread->thread);
     dw->openCallback(dw, 0, true);
   }
 }

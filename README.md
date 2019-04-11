@@ -4,4 +4,6 @@
 This is designed primarily for use with scripting language bindings such as Node
 and Ruby.
 
-A work in progress...
+# TODO
+- CMake
+- Windows

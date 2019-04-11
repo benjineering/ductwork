@@ -10,11 +10,15 @@
 MunitResult name(const MunitParameter params[], void* fixture)
 
 extern const char *REQUESTED_PATH;
+extern const char *FULL_PATH;
 extern const int READ_BUFFER_SIZE;
 extern int userData;
 
 extern const int PREV_ERROR_SIZE;
 extern char *prev_error;
+
+extern const int OPEN_TIMEOUT_MS;
+extern const char *CONTENT;
 
 void main_error_handler(const char *msg);
 

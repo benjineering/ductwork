@@ -41,36 +41,71 @@ MunitTest tests[] = {
     .name = "/server/init",
     .test = server_init_test,
     .options = MUNIT_TEST_OPTION_NONE,
-    .setup = test_setup,
-    .tear_down = test_tear_down
+    .setup = server_setup,
+    .tear_down = server_tear_down
   },
   {
     .name = "/server/create",
     .test = server_create_test,
     .options = MUNIT_TEST_OPTION_NONE,
-    .setup = test_setup,
-    .tear_down = test_tear_down
+    .setup = server_setup,
+    .tear_down = server_tear_down
   },
   {
     .name = "/server/open/timeout",
     .test = server_open_timeout_test,
     .options = MUNIT_TEST_OPTION_NONE,
-    .setup = test_setup,
-    .tear_down = test_tear_down
+    .setup = server_setup,
+    .tear_down = server_tear_down
   },
   {
     .name = "/server/open/read-first",
     .test = server_open_read_first_test,
     .options = MUNIT_TEST_OPTION_NONE,
-    .setup = test_setup,
-    .tear_down = test_tear_down
+    .setup = server_setup,
+    .tear_down = server_tear_down
   },
   {
     .name = "/server/open/write-first",
     .test = server_open_write_first_test,
     .options = MUNIT_TEST_OPTION_NONE,
-    .setup = test_setup,
-    .tear_down = test_tear_down
+    .setup = server_setup,
+    .tear_down = server_tear_down
+  },
+  {
+    .name = "/client/init",
+    .test = client_init_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = client_setup,
+    .tear_down = client_tear_down
+  },
+  {
+    .name = "/client/create",
+    .test = client_create_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = client_setup,
+    .tear_down = client_tear_down
+  },
+  {
+    .name = "/client/open/timeout",
+    .test = client_open_timeout_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = client_setup,
+    .tear_down = client_tear_down
+  },
+  {
+    .name = "/client/open/read-first",
+    .test = client_open_read_first_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = client_setup,
+    .tear_down = client_tear_down
+  },
+  {
+    .name = "/client/open/write-first",
+    .test = client_open_write_first_test,
+    .options = MUNIT_TEST_OPTION_NONE,
+    .setup = client_setup,
+    .tear_down = client_tear_down
   },
   { .test = NULL }
 };
