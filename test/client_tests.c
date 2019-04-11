@@ -6,7 +6,7 @@
 
 int open_fd;
 bool open_timeout;
-char read_buffer[DT_READ_BUFFER_SIZE];
+char read_buffer[DWT_READ_BUFFER_SIZE];
 
 void client_open_handler(dw_instance *dw, int fd, bool timeout) {
   if (timeout)
@@ -18,15 +18,15 @@ void client_open_handler(dw_instance *dw, int fd, bool timeout) {
 }
 
 void *client_read_thread_worker(dw_instance *dw) {
-  dw_open_pipe(dw, DT_DEFAULT_TIMEOUT, client_open_handler);
-  read(open_fd, read_buffer, DT_READ_BUFFER_SIZE);
+  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
+  read(open_fd, read_buffer, DWT_READ_BUFFER_SIZE);
   close(open_fd);
   return NULL;
 }
 
 void *client_write_thread_worker(dw_instance *dw) {
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
-  write(fd, DT_CONTENT, strlen(DT_CONTENT));
+  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
   close(fd);
   return NULL;
 }
@@ -34,19 +34,19 @@ void *client_write_thread_worker(dw_instance *dw) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* client_setup(const MunitParameter params[], void* user_data) {
-  remove(DT_REQUESTED_PATH);
-  dt_prev_error[0] = '\0';
+  remove(DWT_REQUESTED_PATH);
+  dwt_prev_error[0] = '\0';
   open_fd = 0;
   open_timeout = true;
   read_buffer[0] = '\0';
   
-  mkfifo(DT_FULL_PATH, S_IRUSR | S_IWUSR);
+  mkfifo(DWT_ACTUAL_PATH, S_IRUSR | S_IWUSR);
 
   return dw_init(
     DW_CLIENT_TYPE,
-    DT_FULL_PATH,
-    dt_error_handler,
-    &dt_user_data
+    DWT_ACTUAL_PATH,
+    dwt_error_handler,
+    &dwt_user_data
   );
 }
 
@@ -56,28 +56,28 @@ void client_tear_down(void* fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-DT_TEST(client_init_test) {
+DWT_TEST(client_init_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
   // TODO: type params
 
   assert_ptr(dw, !=, NULL);
-  assert_string_equal(dt_prev_error, "");
+  assert_string_equal(dwt_prev_error, "");
   assert_int(dw_get_type(dw), ==, DW_CLIENT_TYPE);
-  assert_int(*(int *)dw_get_user_data(dw), ==, dt_user_data);
-  assert_string_equal(dw_get_full_path(dw), DT_REQUESTED_PATH);
+  assert_int(*(int *)dw_get_user_data(dw), ==, dwt_user_data);
+  assert_string_equal(dw_get_full_path(dw), DWT_REQUESTED_PATH);
   return MUNIT_OK;
 }
 
-DT_TEST(client_create_test) {
+DWT_TEST(client_create_test) {
   dw_instance *dw = (dw_instance *)fixture;
-  bool success = dw_create_pipe(dw, DT_OPEN_TIMEOUT_MS);
+  bool success = dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(!success);
-  assert_string_not_equal(dt_prev_error, "");
+  assert_string_not_equal(dwt_prev_error, "");
   return MUNIT_OK;
 }
 
-DT_TEST(client_open_timeout_test) {
+DWT_TEST(client_open_timeout_test) {
   dw_instance *dw = (dw_instance *)fixture;
   dw_open_pipe(dw, -1, client_open_handler);
   assert(open_timeout);
@@ -86,7 +86,7 @@ DT_TEST(client_open_timeout_test) {
   return MUNIT_OK;
 }
 
-DT_TEST(client_open_read_first_test) {
+DWT_TEST(client_open_read_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
   // read
@@ -99,18 +99,18 @@ DT_TEST(client_open_read_first_test) {
   );
 
   // write
-  dw_open_pipe(dw, DT_DEFAULT_TIMEOUT, client_open_handler);
+  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
   assert(!open_timeout);
   assert(open_fd);
-  write(open_fd, DT_CONTENT, strlen(DT_CONTENT));
+  write(open_fd, DWT_CONTENT, strlen(DWT_CONTENT));
 
   pthread_join(readThread, NULL);
-  assert_string_equal(read_buffer, DT_CONTENT);
+  assert_string_equal(read_buffer, DWT_CONTENT);
   close(open_fd);
   return MUNIT_OK;
 }
 
-DT_TEST(client_open_write_first_test) {
+DWT_TEST(client_open_write_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
   // write
@@ -124,13 +124,13 @@ DT_TEST(client_open_write_first_test) {
 
   // read
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
-  read(fd, read_buffer, DT_READ_BUFFER_SIZE);
+  read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   close(fd);
 
   pthread_join(writeThread, NULL);
   assert(!open_timeout);
   assert(open_fd);
-  assert_string_equal(read_buffer, DT_CONTENT);
+  assert_string_equal(read_buffer, DWT_CONTENT);
   return MUNIT_OK;
 }
 

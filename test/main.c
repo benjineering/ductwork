@@ -2,7 +2,7 @@
 #include "server_tests.h"
 #include "client_tests.h"
 
-DT_TEST(add_ms_999_test) {
+DWT_TEST(add_ms_999_test) {
   struct timespec time = {
     .tv_nsec = 12,
     .tv_sec = 3
@@ -14,7 +14,7 @@ DT_TEST(add_ms_999_test) {
   return MUNIT_OK;
 }
 
-DT_TEST(add_ms_1001_test) {
+DWT_TEST(add_ms_1001_test) {
   struct timespec time = {
     .tv_nsec = 1028,
     .tv_sec = 800
@@ -117,15 +117,15 @@ MunitSuite suite = {
   .options = MUNIT_SUITE_OPTION_NONE
 };
 
+void setup_all() {
+  dwt_set_paths();
+}
+
+void tear_down_all() { }
+
 int main(int argc, char *const *argv) {
-
-  
-  printf("%s\n", argv[0]);
-
-  /*
-  prev_error = (char *)malloc(PREV_ERROR_SIZE);
+  setup_all();
   int result = munit_suite_main(&suite, NULL, argc, argv);
-  free(prev_error);
+  tear_down_all();
   return result;
-  */
 }

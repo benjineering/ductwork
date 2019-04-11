@@ -10,8 +10,10 @@ test/client_tests.c \
 test/common.c \
 test/server_tests.c
 
+EXE=ductwork_test
+
 test: $(SRC_FILES) $(TEST_FILES)
-	gcc $(C_FLAGS) $(SRC_FILES) $(TEST_FILES) -o build/ductwork_test
+	gcc $(C_FLAGS) $(SRC_FILES) $(TEST_FILES) -o build/$(EXE)
 
 clean:
-	rm -rf build/*
+	rm -rf build/$(EXE) build/*.o

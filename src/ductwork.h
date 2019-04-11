@@ -15,6 +15,10 @@ typedef int bool;
 #define false 0
 #endif
 
+#ifdef WIN32
+#define DW_PATH_PREFIX "//.pipe"
+#endif
+
 typedef struct dw_instance dw_instance;
 typedef struct dw_thread_info dw_thread_info;
 

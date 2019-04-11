@@ -6,25 +6,27 @@
 #include "../src/ductwork.h"
 #include <stdio.h>
 
-// DT = Ductwork Tests 🤷‍
-
-#define DT_TEST(name) \
+#define DWT_TEST(name) \
 MunitResult name(const MunitParameter params[], void* fixture)
 
-#define DT_READ_BUFFER_SIZE 512
-#define DT_PATH_LENGTH 512
-#define DT_DEFAULT_TIMEOUT 500
+// TODO: probably should just pass this stuff to munit_main()
+// maybe struct dwt_common?
 
-extern const char *DT_REQUESTED_PATH;
-extern const char *DT_FULL_PATH;
-extern int dt_user_data;
+#define DWT_READ_BUFFER_SIZE 512
+#define DWT_PATH_SIZE 4096 // TODO: set this for WIN32
+#define DWT_ERROR_SIZE 512
+#define DWT_OPEN_TIMEOUT_MS 500
+#define DWT_FILENAME "/dw.fifo"
+#define DWT_CONTENT "{\"p00tsy\":[\"w00tsy\"]}"
 
-extern const int DT_ERROR_SIZE;
-extern char *dt_prev_error;
+const char DWT_REQUESTED_PATH[DWT_PATH_SIZE];
+const char DWT_ACTUAL_PATH[DWT_PATH_SIZE];
 
-extern const int DT_OPEN_TIMEOUT_MS;
-extern const char *DT_CONTENT;
+extern int dwt_user_data;
+char dwt_prev_error[DWT_ERROR_SIZE];
 
-void dt_error_handler(const char *msg);
+void dwt_error_handler(const char *msg);
+
+void dwt_set_paths();
 
 #endif

@@ -1,15 +1,27 @@
 #include "common.h"
+#include <unistd.h>
 
-const char *DT_REQUESTED_PATH = "/home/ben/dw.fifo";
-const char *DT_FULL_PATH = "/home/ben/dw.fifo";
-int dt_user_data = 5;
+int dwt_user_data = 5;
 
-const int DT_ERROR_SIZE = 512;
-char *dt_prev_error;
+void dwt_error_handler(const char *msg) {
+  strcpy(dwt_prev_error, msg);
+}
 
-const int DT_OPEN_TIMEOUT_MS = 500;
-const char *DT_CONTENT = "p00ts";
+void dwt_set_paths() {
+  char cwd[DWT_PATH_SIZE];
+  getcwd(cwd, DWT_PATH_SIZE);
+  snprintf((char *)DWT_REQUESTED_PATH, DWT_PATH_SIZE, "%s%s", cwd, DWT_FILENAME);
 
-void dt_error_handler(const char *msg) {
-  strcpy(dt_prev_error, msg);
+#ifdef WIN32
+  snprintf(
+    (char *)DWT_ACTUAL_PATH,
+    DWT_PATH_SIZE,
+    "%s%s%s",
+    DW_PATH_PREFIX,
+    cwd,
+    filename
+  );
+#else
+  strncpy((char *)DWT_ACTUAL_PATH, DWT_REQUESTED_PATH, DWT_PATH_SIZE);
+#endif
 }
