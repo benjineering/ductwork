@@ -59,14 +59,30 @@ void throw_last_error(dw_instance *dw, const char *message) {
 }
 
 void *open_async(dw_instance *dw) {
+
+  //printf("\n[a\n");
+
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
+
+  //printf("\n[b\n");
+
   int fd = open(dw->fullPath, perms);
+
+  //printf("\n[c\n");
 
   if (!fd)
     throw_last_error(dw, "Error opening file");
 
+  //printf("\n[d\n");
+
   pthread_cond_signal(&dw->openThread->condition);
+
+  //printf("\n[e\n");
+
   dw->openCallback(dw, fd, false);
+
+  //printf("\n[f\n");
+
   return NULL;
 }
 

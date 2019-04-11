@@ -13,7 +13,7 @@ MunitResult name(const MunitParameter params[], void* fixture)
 // maybe struct dwt_common?
 
 #define DWT_READ_BUFFER_SIZE 512
-#define DWT_PATH_SIZE 4096 // TODO: set this for WIN32
+#define DWT_PATH_SIZE 4096 // TODO: set DWT_PATH_SIZE for WIN32
 #define DWT_ERROR_SIZE 512
 #define DWT_OPEN_TIMEOUT_MS 500
 #define DWT_FILENAME "/dw.fifo"

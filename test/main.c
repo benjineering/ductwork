@@ -99,14 +99,14 @@ MunitTest tests[] = {
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = client_setup,
     .tear_down = client_tear_down
-  },
+  },/*
   {
     .name = "/client/open/write-first",
     .test = client_open_write_first_test,
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = client_setup,
     .tear_down = client_tear_down
-  },
+  },*/
   { .test = NULL }
 };
 

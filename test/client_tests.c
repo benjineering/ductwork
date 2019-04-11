@@ -34,17 +34,22 @@ void *client_write_thread_worker(dw_instance *dw) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* client_setup(const MunitParameter params[], void* user_data) {
-  remove(DWT_REQUESTED_PATH);
+  remove(DWT_ACTUAL_PATH);
   dwt_prev_error[0] = '\0';
   open_fd = 0;
   open_timeout = true;
   read_buffer[0] = '\0';
   
-  mkfifo(DWT_ACTUAL_PATH, S_IRUSR | S_IWUSR);
+  int mkResult = mkfifo(DWT_ACTUAL_PATH, S_IRUSR | S_IWUSR);
+
+  if (mkResult) {
+    printf("Couldn't mkfifo: %s\n", DWT_ACTUAL_PATH);
+    exit(1);
+  }
 
   return dw_init(
     DW_CLIENT_TYPE,
-    DWT_ACTUAL_PATH,
+    DWT_REQUESTED_PATH,
     dwt_error_handler,
     &dwt_user_data
   );
@@ -79,7 +84,7 @@ DWT_TEST(client_create_test) {
 
 DWT_TEST(client_open_timeout_test) {
   dw_instance *dw = (dw_instance *)fixture;
-  dw_open_pipe(dw, -1, client_open_handler);
+  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
   assert(open_timeout);
   assert_int(open_fd, ==, -1);
   close(open_fd);
@@ -99,14 +104,14 @@ DWT_TEST(client_open_read_first_test) {
   );
 
   // write
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
+  int fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
+  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
   assert(!open_timeout);
   assert(open_fd);
-  write(open_fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  close(fd);
 
   pthread_join(readThread, NULL);
   assert_string_equal(read_buffer, DWT_CONTENT);
-  close(open_fd);
   return MUNIT_OK;
 }
 
@@ -133,5 +138,3 @@ DWT_TEST(client_open_write_first_test) {
   assert_string_equal(read_buffer, DWT_CONTENT);
   return MUNIT_OK;
 }
-
-

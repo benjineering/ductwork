@@ -90,8 +90,8 @@ DWT_TEST(server_open_timeout_test) {
 }
 
 DWT_TEST(server_open_read_first_test) {
-  dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, DWT_OPEN_TIMEOUT_MS);
+  dw_instance *dw = (dw_instance *)fixture;
+  dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
   // read
   pthread_t readThread;
@@ -99,11 +99,11 @@ DWT_TEST(server_open_read_first_test) {
     &readThread, 
     NULL,
     (void *(*)(void *))server_read_thread_worker, 
-    (void *)server
+    (void *)dw
   );
 
   // write
-  dw_open_pipe(server, DWT_OPEN_TIMEOUT_MS, server_open_handler);
+  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, server_open_handler);
   assert(!open_timeout);
   assert(open_fd);
   write(open_fd, DWT_CONTENT, strlen(DWT_CONTENT));
@@ -115,8 +115,8 @@ DWT_TEST(server_open_read_first_test) {
 }
 
 DWT_TEST(server_open_write_first_test) {
-  dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, DWT_OPEN_TIMEOUT_MS);
+  dw_instance *dw = (dw_instance *)fixture;
+  dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
   // write
   pthread_t writeThread;
@@ -124,11 +124,11 @@ DWT_TEST(server_open_write_first_test) {
     &writeThread, 
     NULL,
     (void *(*)(void *))server_write_thread_worker, 
-    (void *)server
+    (void *)dw
   );
 
   // read
-  int fd = open(dw_get_full_path(server), S_IRUSR | O_RDONLY);
+  int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
   read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   close(fd);
 
