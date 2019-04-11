@@ -1,18 +1,15 @@
 #include "common.h"
 
-// TODO: clean up this mess
+const char *DT_REQUESTED_PATH = "/home/ben/dw.fifo";
+const char *DT_FULL_PATH = "/home/ben/dw.fifo";
+int dt_user_data = 5;
 
-const char *REQUESTED_PATH = "/home/ben/dw.fifo";
-const char *FULL_PATH = "/home/ben/dw.fifo";
-const int READ_BUFFER_SIZE = 512;
-int userData = 5;
+const int DT_ERROR_SIZE = 512;
+char *dt_prev_error;
 
-const int PREV_ERROR_SIZE = 512;
-char *prev_error;
+const int DT_OPEN_TIMEOUT_MS = 500;
+const char *DT_CONTENT = "p00ts";
 
-const int OPEN_TIMEOUT_MS = 500;
-const char *CONTENT = "p00ts";
-
-void main_error_handler(const char *msg) {
-  strcpy(prev_error, msg);
+void dt_error_handler(const char *msg) {
+  strcpy(dt_prev_error, msg);
 }

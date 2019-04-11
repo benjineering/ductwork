@@ -6,7 +6,7 @@
 
 int open_fd;
 bool open_timeout;
-char read_buffer[512];
+char read_buffer[DT_READ_BUFFER_SIZE];
 
 void server_open_handler(dw_instance *dw, int fd, bool timeout) {
   if (timeout)
@@ -19,14 +19,14 @@ void server_open_handler(dw_instance *dw, int fd, bool timeout) {
 
 void *server_read_thread_worker(dw_instance *dw) {
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
-  read(fd, read_buffer, 512);
+  read(fd, read_buffer, DT_READ_BUFFER_SIZE);
   close(fd);
   return NULL;
 }
 
 void *server_write_thread_worker(dw_instance *dw) {
-  dw_open_pipe(dw, 500, server_open_handler);
-  write(open_fd, CONTENT, strlen(CONTENT));
+  dw_open_pipe(dw, DT_DEFAULT_TIMEOUT, server_open_handler);
+  write(open_fd, DT_CONTENT, strlen(DT_CONTENT));
   close(open_fd);
   return NULL;
 }
@@ -34,17 +34,17 @@ void *server_write_thread_worker(dw_instance *dw) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* server_setup(const MunitParameter params[], void* user_data) {
-  remove(REQUESTED_PATH);
-  prev_error[0] = '\0';
+  remove(DT_REQUESTED_PATH);
+  dt_prev_error[0] = '\0';
   open_fd = 0;
   open_timeout = true;
   read_buffer[0] = '\0';
 
   return dw_init(
     DW_SERVER_TYPE, 
-    REQUESTED_PATH, 
-    main_error_handler, 
-    &userData
+    DT_REQUESTED_PATH, 
+    dt_error_handler, 
+    &dt_user_data
   );
 }
 
@@ -54,22 +54,22 @@ void server_tear_down(void* fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-DW_TEST(server_init_test) {
+DT_TEST(server_init_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
   // TODO: type params
 
   assert_ptr(dw, !=, NULL);
-  assert_string_equal(prev_error, "");
+  assert_string_equal(dt_prev_error, "");
   assert_int(dw_get_type(dw), ==, DW_SERVER_TYPE);
-  assert_int(*(int *)dw_get_user_data(dw), ==, userData);
-  assert_string_equal(dw_get_full_path(dw), REQUESTED_PATH);
+  assert_int(*(int *)dw_get_user_data(dw), ==, dt_user_data);
+  assert_string_equal(dw_get_full_path(dw), DT_REQUESTED_PATH);
   return MUNIT_OK;
 }
 
-DW_TEST(server_create_test) {
+DT_TEST(server_create_test) {
   dw_instance *dw = (dw_instance *)fixture;
-  bool success = dw_create_pipe(dw, OPEN_TIMEOUT_MS);
+  bool success = dw_create_pipe(dw, DT_OPEN_TIMEOUT_MS);
   assert(success);
 
   struct stat statBuf;
@@ -79,9 +79,9 @@ DW_TEST(server_create_test) {
   return MUNIT_OK;
 }
 
-DW_TEST(server_open_timeout_test) {
+DT_TEST(server_open_timeout_test) {
   dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, OPEN_TIMEOUT_MS);
+  dw_create_pipe(server, DT_OPEN_TIMEOUT_MS);
   dw_open_pipe(server, -1, server_open_handler);
   assert(open_timeout);
   assert_int(open_fd, ==, -1);
@@ -89,9 +89,9 @@ DW_TEST(server_open_timeout_test) {
   return MUNIT_OK;
 }
 
-DW_TEST(server_open_read_first_test) {
+DT_TEST(server_open_read_first_test) {
   dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, OPEN_TIMEOUT_MS);
+  dw_create_pipe(server, DT_OPEN_TIMEOUT_MS);
 
   // read
   pthread_t readThread;
@@ -103,20 +103,20 @@ DW_TEST(server_open_read_first_test) {
   );
 
   // write
-  dw_open_pipe(server, 500, server_open_handler);
+  dw_open_pipe(server, DT_DEFAULT_TIMEOUT, server_open_handler);
   assert(!open_timeout);
   assert(open_fd);
-  write(open_fd, CONTENT, strlen(CONTENT));
+  write(open_fd, DT_CONTENT, strlen(DT_CONTENT));
 
   pthread_join(readThread, NULL);
-  assert_string_equal(read_buffer, CONTENT);
+  assert_string_equal(read_buffer, DT_CONTENT);
   close(open_fd);
   return MUNIT_OK;
 }
 
-DW_TEST(server_open_write_first_test) {
+DT_TEST(server_open_write_first_test) {
   dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, OPEN_TIMEOUT_MS);
+  dw_create_pipe(server, DT_OPEN_TIMEOUT_MS);
 
   // write
   pthread_t writeThread;
@@ -129,12 +129,12 @@ DW_TEST(server_open_write_first_test) {
 
   // read
   int fd = open(dw_get_full_path(server), S_IRUSR | O_RDONLY);
-  read(fd, read_buffer, 512);
+  read(fd, read_buffer, DT_READ_BUFFER_SIZE);
   close(fd);
 
   pthread_join(writeThread, NULL);
   assert(!open_timeout);
   assert(open_fd);
-  assert_string_equal(read_buffer, CONTENT);
+  assert_string_equal(read_buffer, DT_CONTENT);
   return MUNIT_OK;
 }

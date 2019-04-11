@@ -6,20 +6,25 @@
 #include "../src/ductwork.h"
 #include <stdio.h>
 
-#define DW_TEST(name) \
+// DT = Ductwork Tests 🤷‍
+
+#define DT_TEST(name) \
 MunitResult name(const MunitParameter params[], void* fixture)
 
-extern const char *REQUESTED_PATH;
-extern const char *FULL_PATH;
-extern const int READ_BUFFER_SIZE;
-extern int userData;
+#define DT_READ_BUFFER_SIZE 512
+#define DT_PATH_LENGTH 512
+#define DT_DEFAULT_TIMEOUT 500
 
-extern const int PREV_ERROR_SIZE;
-extern char *prev_error;
+extern const char *DT_REQUESTED_PATH;
+extern const char *DT_FULL_PATH;
+extern int dt_user_data;
 
-extern const int OPEN_TIMEOUT_MS;
-extern const char *CONTENT;
+extern const int DT_ERROR_SIZE;
+extern char *dt_prev_error;
 
-void main_error_handler(const char *msg);
+extern const int DT_OPEN_TIMEOUT_MS;
+extern const char *DT_CONTENT;
+
+void dt_error_handler(const char *msg);
 
 #endif
