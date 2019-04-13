@@ -44,6 +44,8 @@ void dw_open_pipe(
 
 const char *dw_get_full_path(dw_instance *dw);
 
+void dw_set_path(dw_instance *dw, const char *path);
+
 void *dw_get_user_data(dw_instance *dw);
 
 void dw_set_user_data(dw_instance *dw, void *userData);
