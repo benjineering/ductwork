@@ -4,30 +4,29 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int open_fd;
-bool open_timeout;
 char read_buffer[DWT_READ_BUFFER_SIZE];
 
-void server_open_handler(dw_instance *dw, int fd, bool timeout) {
-  if (timeout)
-    open_fd = -1;
-  else
-    open_fd = fd;
-
-  open_timeout = timeout;
-}
-
-void *server_read_thread_worker(dw_instance *dw) {
+void *server_manual_read(dw_instance *dw) {
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
+
+  if (fd < 1)
+    perror("MANUAL OPEN ERROR: ");
+    
   read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   close(fd);
+
   return NULL;
 }
 
-void *server_write_thread_worker(dw_instance *dw) {
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, server_open_handler);
-  write(open_fd, DWT_CONTENT, strlen(DWT_CONTENT));
-  close(open_fd);
+void *server_dw_write(dw_instance *dw) {
+  bool open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
+  assert(open_ok);
+
+  int fd = dw_get_fd(dw);
+  assert(fd);
+
+  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  dw_close_pipe(dw);
   return NULL;
 }
 
@@ -36,8 +35,6 @@ void *server_write_thread_worker(dw_instance *dw) {
 void* server_setup(const MunitParameter params[], void* user_data) {
   remove(DWT_REQUESTED_PATH);
   dwt_prev_error[0] = '\0';
-  open_fd = 0;
-  open_timeout = true;
   read_buffer[0] = '\0';
 
   return dw_init(
@@ -69,6 +66,8 @@ DWT_TEST(server_init_test) {
 
 DWT_TEST(server_create_test) {
   dw_instance *dw = (dw_instance *)fixture;
+
+  // TODO: create pipe in setup
   bool success = dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(success);
 
@@ -80,12 +79,16 @@ DWT_TEST(server_create_test) {
 }
 
 DWT_TEST(server_open_timeout_test) {
-  dw_instance *server = (dw_instance *)fixture;
-  dw_create_pipe(server, DWT_OPEN_TIMEOUT_MS);
-  dw_open_pipe(server, -1, server_open_handler);
-  assert(open_timeout);
-  assert_int(open_fd, ==, -1);
-  close(open_fd);
+  dw_instance *dw = (dw_instance *)fixture;
+  dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
+
+  bool ok = dw_open_pipe(dw, -1);
+  assert(!ok);
+  
+  int fd = dw_get_fd(dw);
+  assert_int(fd, ==, -1);
+  dw_close_pipe(dw);
+
   return MUNIT_OK;
 }
 
@@ -93,24 +96,27 @@ DWT_TEST(server_open_read_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
   dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
-  // read
+  // TODO: break this sort of shit out into fixtures or something
   pthread_t readThread;
   pthread_create(
     &readThread, 
     NULL,
-    (void *(*)(void *))server_read_thread_worker, 
+    (void *(*)(void *))server_manual_read, 
     (void *)dw
   );
 
-  // write
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, server_open_handler);
-  assert(!open_timeout);
-  assert(open_fd);
-  write(open_fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  bool open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
+  assert(open_ok);
 
+  int fd = dw_get_fd(dw);
+  assert(fd);
+
+  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));  
   pthread_join(readThread, NULL);
-  assert_string_equal(read_buffer, DWT_CONTENT);
-  close(open_fd);
+
+  assert_string_equal(read_buffer, DWT_CONTENT);  
+  dw_close_pipe(dw);
+
   return MUNIT_OK;
 }
 
@@ -118,23 +124,20 @@ DWT_TEST(server_open_write_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
   dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
-  // write
   pthread_t writeThread;
   pthread_create(
     &writeThread, 
     NULL,
-    (void *(*)(void *))server_write_thread_worker, 
+    (void *(*)(void *))server_dw_write, 
     (void *)dw
   );
 
-  // read
   int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
   read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
+
+  pthread_join(writeThread, NULL);  
+  assert_string_equal(read_buffer, DWT_CONTENT);
   close(fd);
 
-  pthread_join(writeThread, NULL);
-  assert(!open_timeout);
-  assert(open_fd);
-  assert_string_equal(read_buffer, DWT_CONTENT);
   return MUNIT_OK;
 }

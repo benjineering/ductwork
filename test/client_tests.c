@@ -4,30 +4,21 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int open_fd;
-bool open_timeout;
+bool open_ok;
+int manual_fd;
 char read_buffer[DWT_READ_BUFFER_SIZE];
 
-void client_open_handler(dw_instance *dw, int fd, bool timeout) {
-  if (timeout)
-    open_fd = -1;
-  else
-    open_fd = fd;
+void *client_dw_open(dw_instance *dw) {
+  open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
-  open_timeout = timeout;
-}
-
-void *client_read_thread_worker(dw_instance *dw) {
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
-  read(open_fd, read_buffer, DWT_READ_BUFFER_SIZE);
-  close(open_fd);
+  if (manual_fd < 1)
+    perror("MANUAL OPEN ERROR: ");
+    
   return NULL;
 }
 
-void *client_write_thread_worker(dw_instance *dw) {
-  int fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
-  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
-  close(fd);
+void *client_manual_open(dw_instance *dw) {
+  manual_fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
   return NULL;
 }
 
@@ -36,8 +27,8 @@ void *client_write_thread_worker(dw_instance *dw) {
 void* client_setup(const MunitParameter params[], void* user_data) {
   remove(DWT_ACTUAL_PATH);
   dwt_prev_error[0] = '\0';
-  open_fd = 0;
-  open_timeout = true;
+  manual_fd = 0;
+  open_ok = true;
   read_buffer[0] = '\0';
   
   int mkResult = mkfifo(DWT_ACTUAL_PATH, S_IRUSR | S_IWUSR);
@@ -84,57 +75,67 @@ DWT_TEST(client_create_test) {
 
 DWT_TEST(client_open_timeout_test) {
   dw_instance *dw = (dw_instance *)fixture;
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
-  assert(open_timeout);
-  assert_int(open_fd, ==, -1);
-  close(open_fd);
+  bool ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
+  assert(!ok);
+
+  int fd = dw_get_fd(dw);
+  assert_int(fd, ==, -1);
+  close(fd);
   return MUNIT_OK;
 }
 
 DWT_TEST(client_open_read_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
-  // read
   pthread_t readThread;
   pthread_create(
     &readThread, 
     NULL,
-    (void *(*)(void *))client_read_thread_worker, 
+    (void *(*)(void *))client_dw_open, 
     (void *)dw
   );
 
-  // write
-  int fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
-  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
-  close(fd);
+  manual_fd = open(dw_get_full_path(dw), S_IRUSR | O_WRONLY);
+  write(manual_fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  close(manual_fd);
 
   pthread_join(readThread, NULL);
-  assert(!open_timeout);
-  assert(open_fd);
+  assert(open_ok);
+
+  int fd = dw_get_fd(dw);
+  assert(fd);
+
+  read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   assert_string_equal(read_buffer, DWT_CONTENT);
+  dw_close_pipe(dw);
+
   return MUNIT_OK;
 }
 
 DWT_TEST(client_open_write_first_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
-  // write
   pthread_t writeThread;
   pthread_create(
     &writeThread, 
     NULL,
-    (void *(*)(void *))client_write_thread_worker, 
+    (void *(*)(void *))client_manual_open, 
     (void *)dw
   );
 
-  // read
-  dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS, client_open_handler);
-  assert(!open_timeout);
-  assert(open_fd);
-  read(open_fd, read_buffer, DWT_READ_BUFFER_SIZE);
-  close(open_fd);
-
+  open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
+  assert(open_ok);
+  
   pthread_join(writeThread, NULL);
+  write(manual_fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  close(manual_fd);
+
+  int fd = dw_get_fd(dw);
+  assert(fd);
+
+  read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   assert_string_equal(read_buffer, DWT_CONTENT);
+  dw_close_pipe(dw);
+
   return MUNIT_OK;
 }

@@ -17,4 +17,10 @@ DWT_TEST(server_open_read_first_test);
 
 DWT_TEST(server_open_write_first_test);
 
+// TODO: test fd getter
+
+// TODO: test path setter
+
+// TODO: test close
+
 #endif

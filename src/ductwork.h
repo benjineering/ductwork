@@ -37,14 +37,15 @@ void dw_free(dw_instance *dw);
 
 bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs);
 
-void dw_open_pipe(
-  dw_instance *dw,
-  int overrideTimeoutMs,
-  void (*callback)(dw_instance *dw, int fd, bool timeout));
+bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs);
+
+void dw_close_pipe(dw_instance *dw);
 
 const char *dw_get_full_path(dw_instance *dw);
 
 void dw_set_path(dw_instance *dw, const char *path);
+
+int dw_get_fd(dw_instance *dw);
 
 void *dw_get_user_data(dw_instance *dw);
 

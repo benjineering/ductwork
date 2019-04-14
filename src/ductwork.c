@@ -13,9 +13,9 @@ struct dw_instance {
   const char *path;
   const char fullPath[DW_FULL_PATH_SIZE];
   void (*errorHandler)(const char * message);
-  void (*openCallback)(dw_instance *dw, int fd, bool timeout);
   dw_thread_info *openThread;
   int defaultTimeoutMs;
+  int fd;
 };
 
 struct dw_thread_info {
@@ -60,13 +60,12 @@ void throw_last_error(dw_instance *dw, const char *message) {
 
 void *open_async(dw_instance *dw) {
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
-  int fd = open(dw->fullPath, perms);
+  dw->fd = open(dw->fullPath, perms);
 
-  if (!fd)
-    throw_last_error(dw, "Error opening file");
+  if (dw->fd)
+    throw_last_error(dw, "Error opening file");  
 
   pthread_cond_signal(&dw->openThread->condition);
-  dw->openCallback(dw, fd, false);
   return NULL;
 }
 
@@ -118,13 +117,7 @@ bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
   return true;
 }
 
-void dw_open_pipe(
-  dw_instance *dw,
-  int overrideTimeoutMs,
-  void (*callback)(dw_instance *dw, int fd, bool timeout)
-) {
-  dw->openCallback = callback;
-
+bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) {
   struct timespec timeout;
   int timeoutMs = overrideTimeoutMs > -1 
     ? overrideTimeoutMs : dw->defaultTimeoutMs;
@@ -151,8 +144,15 @@ void dw_open_pipe(
 
   if (waitResult == ETIMEDOUT) {
     pthread_cancel(dw->openThread->thread);
-    dw->openCallback(dw, 0, true);
+    dw->fd = -1;
+    return false;
   }
+
+  return true;
+}
+
+void dw_close_pipe(dw_instance *dw) {
+  close(dw->fd);
 }
 
 const char *dw_get_full_path(dw_instance *dw) {
@@ -164,6 +164,10 @@ void dw_set_path(dw_instance *dw, const char *path) {
     dw->path = path;
     strcpy((char *)dw->fullPath, dw->path);
   }
+}
+
+int dw_get_fd(dw_instance *dw) {
+  return dw->fd;
 }
 
 void *dw_get_user_data(dw_instance *dw) {
