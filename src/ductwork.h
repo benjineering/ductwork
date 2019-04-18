@@ -1,11 +1,9 @@
 #ifndef DUCTWORK_H
 #define DUCTWORK_H
 
+#ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
-
-#include <pthread.h>
-#include <stdlib.h>
-#include <time.h>
+#endif
 
 #define DW_FULL_PATH_SIZE 4096
 
@@ -15,7 +13,7 @@ typedef int bool;
 #define false 0
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define DW_PATH_PREFIX "//.pipe"
 #endif
 
@@ -52,7 +50,5 @@ void *dw_get_user_data(dw_instance *dw);
 void dw_set_user_data(dw_instance *dw, void *userData);
 
 enum dw_instance_type dw_get_type(dw_instance *dw);
-
-void dw_add_ms(struct timespec *time, int ms);
 
 #endif
