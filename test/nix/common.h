@@ -4,6 +4,8 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include "../../lib/munit/munit.h"
 #include "../../src/ductwork.h"
+#include "../../src/ductwork_nix.h"
+#include <pthread.h>
 #include <stdio.h>
 
 #define DWT_TEST(name) \
