@@ -34,13 +34,11 @@ void *server_dw_write(dw_instance *dw) {
 
 void* server_setup(const MunitParameter params[], void* user_data) {
   remove(DWT_REQUESTED_PATH);
-  dwt_prev_error[0] = '\0';
   read_buffer[0] = '\0';
 
   return dw_init(
     DW_SERVER_TYPE, 
-    DWT_REQUESTED_PATH, 
-    dwt_error_handler, 
+    DWT_REQUESTED_PATH,
     &dwt_user_data
   );
 }
@@ -54,10 +52,9 @@ void server_tear_down(void* fixture) {
 DWT_TEST(server_init_test) {
   dw_instance *dw = (dw_instance *)fixture;
 
-  // TODO: type params
+  // TODO: type params?
 
   assert_ptr(dw, !=, NULL);
-  assert_string_equal(dwt_prev_error, "");
   assert_int(dw_get_type(dw), ==, DW_SERVER_TYPE);
   assert_int(*(int *)dw_get_user_data(dw), ==, dwt_user_data);
   assert_string_equal(dw_get_full_path(dw), DWT_REQUESTED_PATH);
