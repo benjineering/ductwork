@@ -109,6 +109,12 @@ bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
 }
 
 bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) {
+  if (dw->type == DW_CLIENT_TYPE && overrideTimeoutMs < 0) {
+    dw->fd = -1;
+    strcpy(dw->lastError, "Client override timout must be greater than -1");
+    return true;
+  }
+
   struct timespec timeout;
   int timeoutMs = overrideTimeoutMs > -1 
     ? overrideTimeoutMs : dw->defaultTimeoutMs;
