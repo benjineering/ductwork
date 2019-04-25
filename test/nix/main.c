@@ -50,14 +50,14 @@ MunitTest tests[] = {
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = server_setup,
     .tear_down = server_tear_down
-  },
+  },/*
   {
     .name = "/server/open/timeout",
     .test = server_open_timeout_test,
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = server_setup,
     .tear_down = server_tear_down
-  },
+  },*/
   {
     .name = "/server/open/read-first",
     .test = server_open_read_first_test,
@@ -85,14 +85,14 @@ MunitTest tests[] = {
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = client_setup,
     .tear_down = client_tear_down
-  },
+  },/*
   {
     .name = "/client/open/timeout",
     .test = client_open_timeout_test,
     .options = MUNIT_TEST_OPTION_NONE,
     .setup = client_setup,
     .tear_down = client_tear_down
-  },
+  },*/
   {
     .name = "/client/open/read-first",
     .test = client_open_read_first_test,
