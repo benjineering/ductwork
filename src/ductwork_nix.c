@@ -192,9 +192,7 @@ void dw_add_ms(struct timespec *time, int ms) {
     time->tv_nsec += ms * 1000;
   }
   else {
-    // TODO: this more efficiently
-    int secs = ms / 1000;
-    time->tv_sec += secs;
-    time->tv_nsec += (ms - (secs * 1000)) * 1000;
+    time->tv_sec += ms / 1000;
+    time->tv_nsec += ms % 1000 * 1000;
   }
 }
