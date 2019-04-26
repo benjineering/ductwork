@@ -52,15 +52,16 @@ void set_last_error(dw_instance *dw, const char *message) {
 }
 
 void *open_async(dw_instance *dw) {
-  pthread_mutex_lock(&dw->openThread->mutex);
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
   dw->fd = open(dw->fullPath, perms);
 
   if (dw->fd)
-    set_last_error(dw, "Error opening file");  
+    set_last_error(dw, "Error opening file");
 
+  pthread_mutex_lock(&dw->openThread->mutex);
   pthread_cond_signal(&dw->openThread->condition);
   pthread_mutex_unlock(&dw->openThread->mutex);
+
   return NULL;
 }
 
@@ -121,9 +122,6 @@ bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) {
   int timeoutMs = overrideTimeoutMs > -1 
     ? overrideTimeoutMs : dw->defaultTimeoutMs;
 
-  clock_gettime(CLOCK_REALTIME, &timeout);
-  dw_add_ms(&timeout, timeoutMs);
-
   pthread_mutex_lock(&dw->openThread->mutex);
 
   pthread_create(
@@ -132,6 +130,9 @@ bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) {
     (void *(*)(void *))open_async, 
     (void *)dw
   );
+
+  clock_gettime(CLOCK_REALTIME, &timeout);
+  dw_add_ms(&timeout, timeoutMs);
 
   int waitResult = pthread_cond_timedwait(
     &dw->openThread->condition, 
@@ -195,4 +196,6 @@ void dw_add_ms(struct timespec *time, int ms) {
     time->tv_sec += ms / 1000;
     time->tv_nsec += ms % 1000 * 1000;
   }
+
+  // TODO: handle nsec > 999,999
 }
