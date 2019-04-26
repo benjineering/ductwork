@@ -75,6 +75,7 @@ dw_instance *dw_init(
   dw_instance *dw = (dw_instance *)malloc(sizeof(dw_instance));
   dw->type = type;
   dw->userData = userData;
+  dw->fd = -1;
 
   dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
   pthread_cond_init(&dw->openThread->condition, NULL);
