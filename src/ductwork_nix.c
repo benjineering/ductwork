@@ -55,7 +55,7 @@ void *open_async(dw_instance *dw) {
   int perms = dw->type == DW_SERVER_TYPE ? WRITE_PERMS : READ_PERMS;
   dw->fd = open(dw->fullPath, perms);
 
-  if (dw->fd)
+  if (dw->fd < 1)
     set_last_error(dw, "Error opening file");
 
   pthread_mutex_lock(&dw->openThread->mutex);
