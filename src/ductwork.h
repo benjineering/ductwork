@@ -5,14 +5,10 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
+#include <stdbool.h>
+
 #define DW_PATH_SIZE 4096
 #define DW_LAST_ERROR_SIZE 1024
-
-#ifndef bool
-typedef int bool;
-#define true 1
-#define false 0
-#endif
 
 #ifdef _WIN32
 #define DW_PATH_PREFIX "//.pipe"
