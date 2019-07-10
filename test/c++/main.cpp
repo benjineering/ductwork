@@ -4,8 +4,17 @@
 #include <string>
 #include "../../src/c++/ductwork.h"
 
-TEST_CASE("Ductwork server is real good", "[Ductwork::Server]") {
-  std::string path("/Users/ben/Desktop/dw.fifo");
-  Ductwork::Server server(path, NULL);
-  REQUIRE(server.get_full_path() == path);
+using std::string;
+using Ductwork::Server;
+
+TEST_CASE("Ductwork server", "[Ductwork::Server]") {
+  string path("/Users/ben/Desktop/dw.fifo");
+  string userData("data time");
+  Server server(path, &userData);
+
+  SECTION("Init") {
+    REQUIRE(server.get_type() == DW_SERVER_TYPE);
+    REQUIRE(server.get_user_data() == &userData);
+    REQUIRE(server.get_full_path() == path);
+  }
 }

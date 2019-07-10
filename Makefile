@@ -15,6 +15,9 @@ test/nix/server_tests.c
 SRC_FILES_NIX_CPP=src/c++/ductwork.cpp \
 src/ductwork_nix.c
 
+SRC_FILES_WIN_CPP=src/c++/ductwork.cpp \
+src/ductwork_win.c
+
 TEST_FILES_NIX_CPP=test/c++/main.cpp
 
 EXE=ductwork_test
@@ -27,6 +30,9 @@ test-win: $(SRC_FILES_WIN) $(TEST_FILES_WIN)
 
 test-nix-cpp: $(SRC_FILES_NIX_CPP) $(TEST_FILES_NIX_CPP)
 	clang++ $(CPP_FLAGS_NIX) $(SRC_FILES_NIX_CPP) $(TEST_FILES_NIX_CPP) -o build/$(EXE)
+
+test-win-cpp: $(SRC_FILES_WIN_CPP) $(TEST_FILES_WIN_CPP)
+	clang++ $(CPP_FLAGS_WIN) $(SRC_FILES_WIN_CPP) $(TEST_FILES_WIN_CPP) -o build/$(EXE).exe
 
 clean:
 	rm -rf build/$(EXE) build/$(EXE).exe build/*.o
