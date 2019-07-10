@@ -7,18 +7,18 @@ namespace Ductwork {
     Server(std::string path, void *userData);
     ~Server();
 
-    bool createPipe(int defaultTimeoutMs);
-    void close_pipe();
+    bool createPipe(int defaultTimeoutMs = 300);
+    void closePipe();
     
-    std::string get_full_path();
-    void set_path(std::string path);
-    int get_fd();
+    std::string getFullPath();
+    void setPath(std::string path);
+    int getFd();
 
-    void *get_user_data();
-    void set_user_data(void *userData);
+    void *getUserData();
+    void setUserData(void *userData);
 
-    enum dw_instance_type get_type();
-    std::string get_last_error();
+    enum dw_instance_type getType();
+    std::string getLastError();
 
   private:
     dw_instance *dw;

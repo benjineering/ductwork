@@ -16,34 +16,34 @@ bool Server::createPipe(int defaultTimeoutMs) {
   return dw_create_pipe(dw, defaultTimeoutMs);
 }
 
-void Server::close_pipe() {
+void Server::closePipe() {
   dw_close_pipe(dw);
 }
 
-string Server::get_full_path() {
+string Server::getFullPath() {
   return dw_get_full_path(dw);
 }
 
-void Server::set_path(string path) {
+void Server::setPath(string path) {
   dw_set_path(dw, path.c_str());
 }
 
-int Server::get_fd() {
+int Server::getFd() {
   return dw_get_fd(dw);
 }
 
-void *Server::get_user_data() {
+void *Server::getUserData() {
   return dw_get_user_data(dw);
 }
 
-void Server::set_user_data(void *userData) {
+void Server::setUserData(void *userData) {
   dw_set_user_data(dw, userData);
 }
 
-enum dw_instance_type Server::get_type() {
+enum dw_instance_type Server::getType() {
   return dw_get_type(dw);
 }
 
-string Server::get_last_error() {
+string Server::getLastError() {
   return string(dw_get_last_error(dw));
 }
