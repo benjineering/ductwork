@@ -1,22 +1,22 @@
 #include "server_tests.h"
+#include <io.h>
+#include <fcntl.h>
 
 char read_buffer[DWT_READ_BUFFER_SIZE];
 
 void *server_manual_read(dw_instance *dw) {
-  /*
-  int fd = open(dw_get_full_path(dw), S_IRUSR | O_RDONLY);
+  int fd = open(dw_get_full_path(dw), O_RDONLY);
 
   if (fd < 1)
     perror("MANUAL OPEN ERROR: ");
     
   read(fd, read_buffer, DWT_READ_BUFFER_SIZE);
   close(fd);
-  */
+
   return NULL;
 }
 
 void *server_dw_write(dw_instance *dw) {
-  /*
   bool open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(open_ok);
 
@@ -25,14 +25,13 @@ void *server_dw_write(dw_instance *dw) {
 
   write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
   dw_close_pipe(dw);
-  */
+  
   return NULL;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void* server_setup(const MunitParameter params[], void* user_data) {
-  /*
   remove(DWT_REQUESTED_PATH);
   read_buffer[0] = '\0';
 
@@ -41,18 +40,15 @@ void* server_setup(const MunitParameter params[], void* user_data) {
     DWT_REQUESTED_PATH,
     &dwt_user_data
   );
-  */
-  return NULL;
 }
 
 void server_tear_down(void* fixture) {
-  //dw_free((dw_instance *)fixture);
+  dw_free((dw_instance *)fixture);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 DWT_TEST(server_init_test) {
-  /*
   dw_instance *dw = (dw_instance *)fixture;
 
   // TODO: type params?
@@ -61,7 +57,7 @@ DWT_TEST(server_init_test) {
   assert_int(dw_get_type(dw), ==, DW_SERVER_TYPE);
   assert_int(*(int *)dw_get_user_data(dw), ==, dwt_user_data);
   assert_string_equal(dw_get_full_path(dw), DWT_REQUESTED_PATH);
-  */
+
   return MUNIT_OK;
 }
 
