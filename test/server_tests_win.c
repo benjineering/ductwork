@@ -32,7 +32,6 @@ void *server_dw_write(dw_instance *dw) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* server_setup(const MunitParameter params[], void* user_data) {
-  remove(DWT_REQUESTED_PATH);
   read_buffer[0] = '\0';
 
   return dw_init(
@@ -42,8 +41,8 @@ void* server_setup(const MunitParameter params[], void* user_data) {
   );
 }
 
-void server_tear_down(void* fixture) {
-  dw_free((dw_instance *)fixture);
+void server_tear_down(void* dw) {
+  dw_free((dw_instance *)dw);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,39 +55,38 @@ DWT_TEST(server_init_test) {
   assert_ptr(dw, !=, NULL);
   assert_int(dw_get_type(dw), ==, DW_SERVER_TYPE);
   assert_int(*(int *)dw_get_user_data(dw), ==, dwt_user_data);
-  assert_string_equal(dw_get_full_path(dw), DWT_REQUESTED_PATH);
+  assert_string_equal(dw_get_full_path(dw), DWT_ACTUAL_PATH);
 
   return MUNIT_OK;
 }
 
 DWT_TEST(server_create_test) {
-  /*
   dw_instance *dw = (dw_instance *)fixture;
 
   // TODO: create pipe in setup
   bool success = dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(success);
-
+/* TODO: test if pipe actually exists
   struct stat statBuf;
   int statResult = stat(dw_get_full_path(dw), &statBuf);
   assert_int(statResult, ==, 0);
   assert_int(statBuf.st_mode & S_IFIFO, ==, S_IFIFO);
-  */
+*/
   return MUNIT_OK;
 }
 
 DWT_TEST(server_open_timeout_test) {
-  /*
   dw_instance *dw = (dw_instance *)fixture;
   dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
 
   bool ok = dw_open_pipe(dw, -1);
   assert(!ok);
-  
+/*
   int fd = dw_get_fd(dw);
   assert_int(fd, ==, -1);
+*/
   dw_close_pipe(dw);
-  */
+
   return MUNIT_OK;
 }
 

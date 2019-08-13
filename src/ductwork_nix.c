@@ -81,12 +81,10 @@ dw_instance *dw_init(
   pthread_cond_init(&dw->openThread->condition, NULL);
   pthread_mutex_init(&dw->openThread->mutex, NULL);
 
-  if (requestedPath && (strlen(requestedPath) + 1) > DW_PATH_SIZE) {
-    set_last_error(dw, "Full path buffer overrun");
+  if (!dw_set_path(dw, requestedPath)) {
     return NULL;
   }
 
-  dw_set_path(dw, requestedPath);
   return dw;
 }
 
@@ -160,11 +158,15 @@ const char *dw_get_full_path(dw_instance *dw) {
   return dw->fullPath;
 }
 
-void dw_set_path(dw_instance *dw, const char *path) {
-  if (path) {
-    strncpy(dw->path, path, DW_PATH_SIZE);
-    strcpy(dw->fullPath, dw->path);
+bool dw_set_path(dw_instance *dw, const char *path) {  
+  if (strlen(requestedPath) + 1 > DW_PATH_SIZE) {
+    set_last_error(dw, "Full path buffer overrun");
+    return false;
   }
+
+  strncpy(dw->path, path, DW_PATH_SIZE);
+  strcpy(dw->fullPath, dw->path);
+  return true;
 }
 
 int dw_get_fd(dw_instance *dw) {

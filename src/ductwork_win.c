@@ -1,8 +1,13 @@
-#ifdef _WIN32
-
 #include "ductwork.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
+
+const int DW_PIPE_BUFFER_SIZE = 512;
+const char *DW_PIPE_NAME_PREFIX = "//./pipe/";
+
+// TODO: typedef deprecated functions to _
 
 struct dw_instance {
   enum dw_instance_type type;
@@ -12,10 +17,15 @@ struct dw_instance {
   char lastError[DW_LAST_ERROR_SIZE];
   dw_thread_info *openThread;
   int defaultTimeoutMs;
-  int fd;
+  HANDLE pipe;
+};
+
+struct dw_thread_info {
+  OVERLAPPED overlap;
 };
 
 void set_last_error(dw_instance *dw, const char *message) {
+  // TODO: GetLastError()
   strncpy(dw->lastError, message, DW_LAST_ERROR_SIZE);
 }
 
@@ -27,53 +37,90 @@ dw_instance *dw_init(
   dw_instance *dw = (dw_instance *)malloc(sizeof(dw_instance));
   dw->type = type;
   dw->userData = userData;
-  dw->fd = -1;
+  dw->pipe = NULL;
+  dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
 
-  // dw->openThread = (dw_thread_info *)malloc(sizeof(dw_thread_info));
-  // pthread_cond_init(&dw->openThread->condition, NULL);
-  // pthread_mutex_init(&dw->openThread->mutex, NULL);
-
-  if (requestedPath && (strlen(requestedPath) + 1) > DW_PATH_SIZE) {
-    set_last_error(dw, "Full path buffer overrun");
+  if (!dw_set_path(dw, requestedPath)) {
     return NULL;
   }
-
-  dw_set_path(dw, requestedPath);
+  
   return dw;
 }
 
 void dw_free(dw_instance *dw) {
-  // TODO: free(dw->openThread); 
+  CloseHandle(dw->pipe);
+  free(dw->openThread); 
   free(dw);
 }
 
 bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
-  // TODO
-  return false;
+  if (dw->type == DW_CLIENT_TYPE) {
+    set_last_error(dw, "Only a DW_SERVER_TYPE can create a pipe");
+    return false;
+  }
+
+  dw->defaultTimeoutMs = defaultTimeoutMs;
+
+  dw->pipe = CreateNamedPipeA(
+    (LPCSTR)dw->fullPath,     // pipe name 
+    PIPE_ACCESS_DUPLEX |     // read/write access 
+    FILE_FLAG_OVERLAPPED,    // overlapped mode 
+    PIPE_TYPE_MESSAGE |      // message-type pipe 
+    PIPE_READMODE_MESSAGE |  // message-read mode 
+    PIPE_WAIT,                // blocking mode 
+    PIPE_UNLIMITED_INSTANCES, // max. instances  
+    DW_PIPE_BUFFER_SIZE,
+    DW_PIPE_BUFFER_SIZE,
+    defaultTimeoutMs,
+    NULL
+  );
+
+  if (dw->pipe == INVALID_HANDLE_VALUE) {
+    set_last_error(dw, "Couldn't create the pipe");
+    return false;
+  }
+
+  return true;
 }
 
-bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) {
-  // TODO
+bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs) { 
+  bool success = ConnectNamedPipe(dw->pipe, &dw->openThread->overlap);
+
+  if (!success) {
+    set_last_error(dw, "Error connecting to pipe");
+    
+    if (GetLastError() == ERROR_IO_PENDING) {
+      return false;
+    }
+  }
+
   return true;
 }
 
 void dw_close_pipe(dw_instance *dw) {
-  // TODO
+  CloseHandle(dw->pipe);
 }
 
+// TODO: DRY up getters and setters
 const char *dw_get_full_path(dw_instance *dw) {
   return dw->fullPath;
 }
 
-void dw_set_path(dw_instance *dw, const char *path) {
-  if (path) {
-    strncpy(dw->path, path, DW_PATH_SIZE);
-    strcpy(dw->fullPath, dw->path);
+bool dw_set_path(dw_instance *dw, const char *path) {
+  if (strlen(DW_PIPE_NAME_PREFIX) + strlen(dw->path) + 1 > DW_PATH_SIZE) {
+    set_last_error(dw, "Full path buffer overrun");
+    return false;
   }
+
+  strncpy(dw->path, path, DW_PATH_SIZE);
+  sprintf((char *)dw->fullPath, "%s%s", DW_PIPE_NAME_PREFIX, dw->path);
+  return true;
 }
 
 int dw_get_fd(dw_instance *dw) {
-  return dw->fd;
+  // TODO: read and write actions
+  //return dw->fd;
+  return -1;
 }
 
 void *dw_get_user_data(dw_instance *dw) {
@@ -91,5 +138,3 @@ enum dw_instance_type dw_get_type(dw_instance *dw) {
 const char *dw_get_last_error(dw_instance *dw) {
   return (const char *)dw->lastError;
 }
-
-#endif

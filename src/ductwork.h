@@ -39,7 +39,7 @@ void dw_close_pipe(dw_instance *dw);
 
 const char *dw_get_full_path(dw_instance *dw);
 
-void dw_set_path(dw_instance *dw, const char *path);
+bool dw_set_path(dw_instance *dw, const char *path);
 
 int dw_get_fd(dw_instance *dw);
 

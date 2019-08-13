@@ -22,7 +22,7 @@ MunitResult name(const MunitParameter params[], void* fixture)
 #define DWT_READ_BUFFER_SIZE 512
 #define DWT_PATH_SIZE 4096 // TODO: set DWT_PATH_SIZE for WIN32
 #define DWT_OPEN_TIMEOUT_MS 500
-#define DWT_FILENAME "/dw.fifo"
+#define DWT_FILENAME "dw.fifo"
 #define DWT_CONTENT "{\"p00tsy\":[\"w00tsy\"]}"
 
 const char DWT_REQUESTED_PATH[DWT_PATH_SIZE];
