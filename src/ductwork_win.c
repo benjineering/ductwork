@@ -8,7 +8,7 @@ struct dw_instance {
   enum dw_instance_type type;
   void *userData;
   const char *path;
-  const char fullPath[DW_FULL_PATH_SIZE];
+  const char fullPath[DW_PATH_SIZE];
   void (*errorHandler)(const char * message);
   dw_thread_info *openThread;
   int defaultTimeoutMs;
@@ -18,7 +18,6 @@ struct dw_instance {
 dw_instance *dw_init(
   enum dw_instance_type type,
   const char *requestedPath,
-  void (*errorHandler)(const char * message),
   void *userData
 ) {
   // TODO

@@ -2,11 +2,16 @@
 #define DW_TESTS_COMMON_H
 
 #define MUNIT_ENABLE_ASSERT_ALIASES
-#include "../../lib/munit/munit.h"
-#include "../../src/ductwork.h"
-#include "../../src/ductwork_nix.h"
-#include <pthread.h>
+#include "../lib/munit/munit.h"
+#include "../src/ductwork.h"
 #include <stdio.h>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include "../src/ductwork_nix.h"
+#include <pthread.h>
+#endif
 
 #define DWT_TEST(name) \
 MunitResult name(const MunitParameter params[], void* fixture)

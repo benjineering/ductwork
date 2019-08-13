@@ -5,13 +5,16 @@ SRC_FILES_NIX=src/ductwork_nix.c
 SRC_FILES_WIN=src/ductwork_win.c
 
 TEST_FILES_NIX=lib/munit/munit.c \
-test/nix/main.c \
-test/nix/client_tests.c \
-test/nix/common.c \
-test/nix/server_tests.c
+test/common.c \
+test/main.c \
+test/client_tests_nix.c \
+test/server_tests_nix.c
 
 TEST_FILES_WIN=lib/munit/munit.c \
-test/win/main.c
+test/common.c \
+test/main.c \
+test/client_tests_win.c \
+test/server_tests_win.c
 
 EXE=ductwork_test
 

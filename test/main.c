@@ -2,31 +2,12 @@
 #include "server_tests.h"
 #include "client_tests.h"
 
-DWT_TEST(add_ms_999_test) {
-  struct timespec time = {
-    .tv_nsec = 12,
-    .tv_sec = 3
-  };
-
-  dw_add_ms(&time, 999);
-  assert_int(time.tv_nsec, ==, 999012);
-  assert_int(time.tv_sec, ==, 3);
-  return MUNIT_OK;
-}
-
-DWT_TEST(add_ms_1001_test) {
-  struct timespec time = {
-    .tv_nsec = 1028,
-    .tv_sec = 800
-  };
-
-  dw_add_ms(&time, 1001);
-  assert_int(time.tv_nsec, ==, 2028);
-  assert_int(time.tv_sec, ==, 801);
-  return MUNIT_OK;
-}
+#ifndef _WIN32
+#include "misc_tests_nix.h"
+#endif
 
 MunitTest tests[] = {
+#ifndef _WIN32
   {
     .name = "/add-ms/999",
     .test = add_ms_999_test,
@@ -37,6 +18,7 @@ MunitTest tests[] = {
     .test = add_ms_1001_test,
     .options = MUNIT_TEST_OPTION_NONE
   },
+#endif
   {
     .name = "/server/init",
     .test = server_init_test,
