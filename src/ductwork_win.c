@@ -1,6 +1,5 @@
 #include "ductwork.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 
@@ -100,6 +99,44 @@ void dw_close_pipe(dw_instance *dw) {
   CloseHandle(dw->pipe);
 }
 
+size_t dw_read(dw_instance *dw, char *buf, size_t count) {
+  DWORD bytesRead;
+
+  bool success = ReadFile( 
+    dw->pipe,
+    buf,
+    count * sizeof(char),
+    &bytesRead,
+    NULL // not overlapped I/O(?)
+  );
+
+  if (!success) {
+    set_last_error(dw, "Error reading from pipe");
+    return 0;
+  }
+
+  return bytesRead;
+}
+
+size_t write(dw_instance *dw, const char *buf, size_t count) {
+  DWORD bytesWritten;
+
+  bool success = WriteFile( 
+    dw->pipe,
+    buf,
+    count,
+    &bytesWritten,
+    NULL // not overlapped I/O(?)
+  );
+
+  if (!success) {
+    set_last_error(dw, "Error writing to pipe");
+    return 0;
+  }
+
+  return bytesWritten;
+}
+
 // TODO: DRY up getters and setters
 const char *dw_get_full_path(dw_instance *dw) {
   return dw->fullPath;
@@ -114,12 +151,6 @@ bool dw_set_path(dw_instance *dw, const char *path) {
   strncpy(dw->path, path, DW_PATH_SIZE);
   sprintf((char *)dw->fullPath, "%s%s", DW_PIPE_NAME_PREFIX, dw->path);
   return true;
-}
-
-int dw_get_fd(dw_instance *dw) {
-  // TODO: read and write actions
-  //return dw->fd;
-  return -1;
 }
 
 void *dw_get_user_data(dw_instance *dw) {

@@ -6,6 +6,7 @@
 #endif
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define DW_PATH_SIZE 4096
 #define DW_LAST_ERROR_SIZE 1024
@@ -37,11 +38,13 @@ bool dw_open_pipe(dw_instance *dw, int overrideTimeoutMs);
 
 void dw_close_pipe(dw_instance *dw);
 
+size_t dw_read(dw_instance *dw, char *buf, size_t count);
+
+size_t write(dw_instance *dw, const char *buf, size_t count);
+
 const char *dw_get_full_path(dw_instance *dw);
 
 bool dw_set_path(dw_instance *dw, const char *path);
-
-int dw_get_fd(dw_instance *dw);
 
 void *dw_get_user_data(dw_instance *dw);
 

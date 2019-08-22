@@ -24,5 +24,11 @@ test-nix: $(SRC_FILES) $(TEST_FILES)
 test-win: $(SRC_FILES) $(TEST_FILES)
 	gcc $(C_FLAGS_WIN) $(SRC_FILES_WIN) $(TEST_FILES_WIN) -o build/$(EXE).exe
 
+nix: $(SRC_FILES)
+	gcc $(C_FLAGS_NIX) $(SRC_FILES_NIX) -o build/$(EXE)
+
+win: $(SRC_FILES) $(TEST_FILES)
+	gcc $(C_FLAGS_WIN) $(SRC_FILES_WIN) -o build/$(EXE).exe
+
 clean:
 	rm -rf build/$(EXE) build/*.o
