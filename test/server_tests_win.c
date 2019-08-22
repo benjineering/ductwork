@@ -20,10 +20,8 @@ void *server_dw_write(dw_instance *dw) {
   bool open_ok = dw_open_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(open_ok);
 
-  int fd = dw_get_fd(dw);
-  assert(fd);
-
-  write(fd, DWT_CONTENT, strlen(DWT_CONTENT));
+  size_t writeLength = dw_write(dw, DWT_CONTENT, strlen(DWT_CONTENT));
+  assert_int(writeLength, ==, strlen(DWT_CONTENT));
   dw_close_pipe(dw);
   
   return NULL;

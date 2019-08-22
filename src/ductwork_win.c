@@ -81,7 +81,7 @@ bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
 
   dw->defaultTimeoutMs = defaultTimeoutMs;
 
-  dw->pipe = CreateNamedPipeA(
+  dw->pipe = CreateNamedPipe(
     (LPCSTR)dw->fullPath,
     PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
     PIPE_TYPE_MESSAGE |      // message-type pipe 
