@@ -29,14 +29,6 @@ const mode_t CREATE_PERMS = S_IRUSR | S_IWUSR;
 const mode_t READ_PERMS = S_IRUSR | O_RDONLY;
 const mode_t WRITE_PERMS = S_IWUSR | O_WRONLY;
 
-char *get_error_str(int errorNum) {
-  return strerror(errorNum);
-}
-
-char *get_last_error_str() {
-  return get_error_str(errno);
-}
-
 void set_error(dw_instance *dw, const char *message, const char *innerMsg) {
   if (innerMsg == NULL) {
     strncpy(dw->lastError, innerMsg, DW_LAST_ERROR_SIZE);
@@ -47,7 +39,7 @@ void set_error(dw_instance *dw, const char *message, const char *innerMsg) {
 }
 
 void set_last_error(dw_instance *dw, const char *message) {
-  set_error(dw, message, get_last_error_str());
+  set_error(dw, message, strerror(errno));
 }
 
 void *open_async(dw_instance *dw) {

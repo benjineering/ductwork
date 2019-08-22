@@ -40,7 +40,7 @@ void dw_close_pipe(dw_instance *dw);
 
 size_t dw_read(dw_instance *dw, char *buf, size_t count);
 
-size_t write(dw_instance *dw, const char *buf, size_t count);
+size_t dw_write(dw_instance *dw, const char *buf, size_t count);
 
 const char *dw_get_full_path(dw_instance *dw);
 

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <windows.h>
 
+#define DW_ERROR_BUFF_SIZE 256
+
 const int DW_PIPE_BUFFER_SIZE = 512;
 const char *DW_PIPE_NAME_PREFIX = "//./pipe/";
 
@@ -17,15 +19,34 @@ struct dw_instance {
   dw_thread_info *openThread;
   int defaultTimeoutMs;
   HANDLE pipe;
+  char _errorBuf[DW_ERROR_BUFF_SIZE];
 };
 
 struct dw_thread_info {
   OVERLAPPED overlap;
 };
 
+void set_error(dw_instance *dw, const char *message, const char *innerMsg) {
+  if (innerMsg == NULL) {
+    strncpy(dw->lastError, innerMsg, DW_LAST_ERROR_SIZE);
+    return;
+  }
+
+  sprintf(dw->lastError, "%s%c %s", message, ':', innerMsg);
+}
+
 void set_last_error(dw_instance *dw, const char *message) {
-  // TODO: GetLastError()
-  strncpy(dw->lastError, message, DW_LAST_ERROR_SIZE);
+  FormatMessage(
+    FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    NULL, 
+    GetLastError(), 
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+    (char *)dw->_errorBuf, 
+    DW_ERROR_BUFF_SIZE * sizeof(char),
+    NULL
+  );
+
+  set_error(dw, message, (const char *)dw->_errorBuf);
 }
 
 dw_instance *dw_init(
@@ -118,7 +139,7 @@ size_t dw_read(dw_instance *dw, char *buf, size_t count) {
   return bytesRead;
 }
 
-size_t write(dw_instance *dw, const char *buf, size_t count) {
+size_t dw_write(dw_instance *dw, const char *buf, size_t count) {
   DWORD bytesWritten;
 
   bool success = WriteFile( 
