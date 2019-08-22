@@ -62,13 +62,12 @@ bool dw_create_pipe(dw_instance *dw, int defaultTimeoutMs) {
   dw->defaultTimeoutMs = defaultTimeoutMs;
 
   dw->pipe = CreateNamedPipeA(
-    (LPCSTR)dw->fullPath,     // pipe name 
-    PIPE_ACCESS_DUPLEX |     // read/write access 
-    FILE_FLAG_OVERLAPPED,    // overlapped mode 
+    (LPCSTR)dw->fullPath,
+    PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
     PIPE_TYPE_MESSAGE |      // message-type pipe 
     PIPE_READMODE_MESSAGE |  // message-read mode 
-    PIPE_WAIT,                // blocking mode 
-    PIPE_UNLIMITED_INSTANCES, // max. instances  
+    PIPE_WAIT,
+    PIPE_UNLIMITED_INSTANCES,
     DW_PIPE_BUFFER_SIZE,
     DW_PIPE_BUFFER_SIZE,
     defaultTimeoutMs,

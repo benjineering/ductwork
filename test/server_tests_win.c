@@ -32,6 +32,7 @@ void *server_dw_write(dw_instance *dw) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void* server_setup(const MunitParameter params[], void* user_data) {
+  DeleteFile(DWT_ACTUAL_PATH);
   read_buffer[0] = '\0';
 
   return dw_init(
@@ -66,12 +67,12 @@ DWT_TEST(server_create_test) {
   // TODO: create pipe in setup
   bool success = dw_create_pipe(dw, DWT_OPEN_TIMEOUT_MS);
   assert(success);
-/* TODO: test if pipe actually exists
-  struct stat statBuf;
-  int statResult = stat(dw_get_full_path(dw), &statBuf);
-  assert_int(statResult, ==, 0);
-  assert_int(statBuf.st_mode & S_IFIFO, ==, S_IFIFO);
-*/
+
+  DWORD attrs = GetFileAttributes(dw_get_full_path(dw));
+  bool exists = (attrs != INVALID_FILE_ATTRIBUTES && 
+    !(attrs & FILE_ATTRIBUTE_DIRECTORY));
+  assert(exists);
+
   return MUNIT_OK;
 }
 
